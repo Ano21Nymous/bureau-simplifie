@@ -224,6 +224,10 @@ body {
   z-index: 50;
 }
 
+.overlay[hidden] {
+  display: none;
+}
+
 .overlay--visible {
   opacity: 1;
 }
