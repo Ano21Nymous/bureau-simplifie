@@ -1,0 +1,569 @@
+/* ------------------------------------------------------------------ *
+ * Bureau simplifié — feuille de style unique, thèmes par attribut.
+ * Toutes les tailles sont en rem : changer --font-scale agrandit tout.
+ * ------------------------------------------------------------------ */
+
+:root {
+  --font-scale: 1.25;
+
+  --bg: #eef2f7;
+  --surface: #ffffff;
+  --surface-2: #f4f6fa;
+  --text: #16202c;
+  --text-soft: #4a5a6d;
+  --border: #d3dce8;
+  --accent: #2f6fed;
+  --shadow: 0 10px 30px rgba(20, 35, 60, 0.12);
+  --radius: 1.1rem;
+}
+
+[data-theme="sombre"] {
+  --bg: #12161c;
+  --surface: #1c232d;
+  --surface-2: #232c38;
+  --text: #f2f6fb;
+  --text-soft: #a9b8c9;
+  --border: #2f3b49;
+  --accent: #6aa1ff;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="contraste"] {
+  --bg: #000000;
+  --surface: #000000;
+  --surface-2: #101010;
+  --text: #ffffff;
+  --text-soft: #ffe259;
+  --border: #ffffff;
+  --accent: #ffe259;
+  --shadow: none;
+}
+
+html {
+  font-size: calc(16px * var(--font-scale, 1.25));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+/* ------------------------------- Barre haute ------------------------------ */
+
+.topbar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.clock,
+.weather {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 0.8rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.clock {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  cursor: default;
+  user-select: none;
+}
+
+.clock__time {
+  font-size: 3.2rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock__date {
+  font-size: 1.15rem;
+  color: var(--text-soft);
+}
+
+.weather__icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.weather__temp {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.weather__place {
+  font-size: 1rem;
+  color: var(--text-soft);
+}
+
+/* --------------------------------- Tuiles -------------------------------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  grid-auto-rows: minmax(9rem, 1fr);
+  gap: 1rem;
+  overflow-y: auto;
+  padding: 0.2rem;
+}
+
+.tile {
+  --tile-color: var(--accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1rem;
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  background: var(--tile-color);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+  font: inherit;
+}
+
+.tile:hover,
+.tile:focus-visible {
+  transform: translateY(-3px);
+  filter: brightness(1.08);
+}
+
+.tile:active {
+  transform: translateY(0);
+  filter: brightness(0.94);
+}
+
+.tile__emoji {
+  font-size: 3.4rem;
+  line-height: 1;
+}
+
+.tile__label {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* --------------------------------- Menu bas ------------------------------ */
+
+.dock {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1rem;
+}
+
+.dock__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.dock__button:hover,
+.dock__button:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.dock__emoji {
+  font-size: 1.6rem;
+}
+
+/* ------------------------------- Modale --------------------------------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 14, 24, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  z-index: 50;
+}
+
+.overlay--visible {
+  opacity: 1;
+}
+
+.panel {
+  width: min(60rem, 100%);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.4rem;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel__title {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.panel__close {
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.6rem 1.2rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 0.8rem;
+  cursor: pointer;
+}
+
+.panel__close:hover {
+  border-color: var(--accent);
+}
+
+.panel__body {
+  padding: 1.4rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+/* ------------------------------- Réglages -------------------------------- */
+
+.settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings__heading {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+}
+
+.field__label {
+  font-weight: 600;
+}
+
+.field__value {
+  align-self: flex-end;
+  color: var(--text-soft);
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.inline {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inline .text-input {
+  flex: 1 1 12rem;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 2rem;
+}
+
+.text-input {
+  font: inherit;
+  font-size: 1.1rem;
+  padding: 0.7rem 0.9rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  border-radius: 0.7rem;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.text-input--short {
+  max-width: 6rem;
+}
+
+.color-input {
+  width: 4.5rem;
+  height: 3rem;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 2rem;
+  height: 2rem;
+  accent-color: var(--accent);
+}
+
+.button {
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 0.8rem 1.4rem;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 0.8rem;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.button:hover {
+  filter: brightness(1.08);
+}
+
+.button--danger {
+  background: #c0392b;
+}
+
+[data-theme="contraste"] .button {
+  color: #000;
+}
+
+.theme-choice {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.theme-choice__button {
+  font: inherit;
+  font-size: 1.1rem;
+  padding: 0.7rem 1.1rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  border-radius: 0.7rem;
+  cursor: pointer;
+}
+
+.theme-choice__button.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+[data-theme="contraste"] .theme-choice__button.is-active {
+  color: #000;
+}
+
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+}
+
+.shortcut-row__emoji {
+  font-size: 1.6rem;
+}
+
+.shortcut-row__info {
+  flex: 1;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.shortcut-row__remove {
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  color: #fff;
+  background: #c0392b;
+  border: none;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.settings__footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ------------------------------ Écran « sites » --------------------------- */
+
+.site-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1rem;
+}
+
+.site {
+  --tile-color: var(--accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.2rem 0.8rem;
+  font: inherit;
+  color: #fff;
+  background: var(--tile-color);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.site:hover {
+  filter: brightness(1.08);
+}
+
+.site__emoji {
+  font-size: 2.6rem;
+}
+
+.site__label {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.address {
+  display: flex;
+  gap: 0.7rem;
+}
+
+.address__input {
+  flex: 1;
+  font: inherit;
+  font-size: 1.3rem;
+  padding: 0.9rem 1rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  border-radius: 0.8rem;
+}
+
+.address__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.address__go {
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 700;
+  padding: 0.9rem 1.6rem;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 0.8rem;
+  cursor: pointer;
+}
+
+/* --------------------------------- Toast --------------------------------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translate(-50%, 1rem);
+  max-width: min(46rem, 90vw);
+  padding: 1rem 1.4rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #fff;
+  background: #1f2a37;
+  border-radius: 0.9rem;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.toast--visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.toast[data-kind="error"] {
+  background: #c0392b;
+}
+
+/* Accessibilité : respect du réglage « animations réduites ». */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.001ms !important;
+  }
+}

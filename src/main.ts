@@ -1,0 +1,173 @@
+import { DEFAULT_SETTINGS } from "./defaults";
+import { isTauri, loadSettings, quitApp, saveSettings, setKiosk, setVolume } from "./ipc";
+import type { Settings } from "./types";
+import { runAction, runShortcut } from "./modules/actions";
+import { openSitePanel } from "./modules/browser-panel";
+import { startClock } from "./modules/clock";
+import { renderDock, renderGrid } from "./modules/launcher";
+import { openSettingsPanel } from "./modules/settings-panel";
+import { toast } from "./modules/toast";
+import { fetchWeather } from "./modules/weather";
+
+const WEATHER_REFRESH_MS = 30 * 60 * 1000;
+
+let settings: Settings = { ...DEFAULT_SETTINGS };
+let weatherAbort: AbortController | null = null;
+let persistTimer: number | undefined;
+
+function setText(id: string, text: string): void {
+  const element = document.getElementById(id);
+  if (element) element.textContent = text;
+}
+
+function applyAppearance(): void {
+  document.documentElement.dataset.theme = settings.theme;
+  document.documentElement.style.setProperty("--font-scale", String(settings.fontScale));
+}
+
+/** Enregistre les réglages, avec un léger différé pour éviter les écritures en rafale. */
+function persist(): void {
+  if (persistTimer !== undefined) window.clearTimeout(persistTimer);
+  persistTimer = window.setTimeout(() => {
+    void saveSettings(settings).catch((error: unknown) => {
+      console.error("Sauvegarde des réglages impossible", error);
+    });
+  }, 400);
+}
+
+function renderAll(): void {
+  renderGrid(settings.shortcuts, (shortcut) => {
+    void runShortcut(shortcut);
+  });
+}
+
+function openSettings(): void {
+  openSettingsPanel({
+    settings,
+    onChange: (next) => {
+      settings = next;
+      applyAppearance();
+      renderAll();
+      persist();
+    },
+    onRefreshWeather: () => {
+      void refreshWeather();
+    },
+    onQuit: () => {
+      void quitApp();
+    },
+  });
+}
+
+function handleDock(action: string): void {
+  switch (action) {
+    case "sites":
+      openSitePanel(settings.shortcuts);
+      return;
+    case "settings":
+      openSettings();
+      return;
+    case "scan":
+    case "print":
+      void runAction(action);
+      return;
+    default:
+      toast(`Action inconnue : ${action}`, "error");
+  }
+}
+
+async function refreshWeather(): Promise<void> {
+  weatherAbort?.abort();
+  weatherAbort = new AbortController();
+
+  try {
+    const result = await fetchWeather(
+      settings.city,
+      { lat: settings.lat, lon: settings.lon },
+      weatherAbort.signal,
+    );
+
+    setText("weather-icon", result.emoji);
+    setText("weather-temp", `${result.temperature}°`);
+    setText("weather-place", `${result.place} · ${result.label}`);
+
+    if (settings.lat !== result.lat || settings.lon !== result.lon) {
+      settings = { ...settings, lat: result.lat, lon: result.lon };
+      persist();
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") return;
+    setText("weather-icon", "🌡️");
+    setText("weather-temp", "--°");
+    setText("weather-place", "Météo indisponible");
+  }
+}
+
+async function exitKiosk(): Promise<void> {
+  settings = { ...settings, kiosk: false };
+  persist();
+  await setKiosk(false);
+  toast("Mode verrouillé désactivé.");
+  openSettings();
+}
+
+/** Cinq clics rapides sur l'heure permettent de sortir du mode kiosque. */
+function setupKioskExit(): void {
+  const clock = document.querySelector(".clock");
+  if (!clock) return;
+
+  const taps: number[] = [];
+  clock.addEventListener("click", () => {
+    if (!settings.kiosk) return;
+    const now = Date.now();
+    taps.push(now);
+    while (taps.length > 0 && now - taps[0] > 2500) taps.shift();
+    if (taps.length >= 5) {
+      taps.length = 0;
+      void exitKiosk();
+    }
+  });
+}
+
+function setupShortcuts(): void {
+  document.addEventListener("keydown", (event) => {
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "q") {
+      event.preventDefault();
+      if (window.confirm("Fermer le bureau simplifié ?")) void quitApp();
+    }
+  });
+
+  // Pas de menu contextuel : l'interface doit rester toute simple.
+  document.addEventListener("contextmenu", (event) => {
+    if (settings.kiosk) event.preventDefault();
+  });
+}
+
+async function init(): Promise<void> {
+  const stored = await loadSettings();
+  settings = {
+    ...DEFAULT_SETTINGS,
+    ...(stored ?? {}),
+    shortcuts: stored?.shortcuts ?? DEFAULT_SETTINGS.shortcuts,
+  };
+
+  applyAppearance();
+  renderAll();
+  renderDock(handleDock);
+  startClock();
+  setupKioskExit();
+  setupShortcuts();
+
+  if (settings.kiosk) void setKiosk(true);
+  void setVolume(settings.volume);
+  void refreshWeather();
+  window.setInterval(() => void refreshWeather(), WEATHER_REFRESH_MS);
+
+  if (!isTauri) {
+    console.info(
+      "Mode navigateur : les raccourcis système sont simulés. Lancez `npm run desktop:dev` pour l'app complète.",
+    );
+  }
+}
+
+void init();

@@ -1,0 +1,11 @@
+# Le projet est développé sur Windows mais compilé sur Linux :
+# on normalise tout en LF pour éviter les surprises.
+* text=auto eol=lf
+
+# Fichiers binaires : jamais convertis.
+*.png binary
+*.ico binary
+*.icns binary
+*.jpg binary
+*.jpeg binary
+*.gif binary

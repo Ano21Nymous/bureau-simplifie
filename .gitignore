@@ -1,0 +1,17 @@
+# Dépendances
+node_modules/
+
+# Build frontend
+dist/
+
+# Build Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Éditeurs / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log
