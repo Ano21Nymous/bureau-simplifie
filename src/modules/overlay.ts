@@ -1,4 +1,4 @@
-/** Fenêtre modale générique (réglages, sites…). */
+/** Pleine page générique : remplace le bureau et se ferme par une croix. */
 
 let escHandler: ((event: KeyboardEvent) => void) | null = null;
 
@@ -25,7 +25,9 @@ export function openOverlay(title: string, build: (body: HTMLElement) => void): 
   const close = document.createElement("button");
   close.type = "button";
   close.className = "panel__close";
-  close.textContent = "Fermer";
+  close.textContent = "✕";
+  close.setAttribute("aria-label", "Fermer et revenir au bureau");
+  close.title = "Fermer";
   close.addEventListener("click", closeOverlay);
 
   header.append(heading, close);
@@ -36,10 +38,6 @@ export function openOverlay(title: string, build: (body: HTMLElement) => void): 
 
   panel.append(header, body);
   overlay.append(panel);
-
-  overlay.onclick = (event) => {
-    if (event.target === overlay) closeOverlay();
-  };
 
   escHandler = (event) => {
     if (event.key === "Escape") closeOverlay();
@@ -61,5 +59,4 @@ export function closeOverlay(): void {
   overlay.classList.remove("overlay--visible");
   overlay.hidden = true;
   overlay.replaceChildren();
-  overlay.onclick = null;
 }
