@@ -278,6 +278,7 @@ Tout tient dans **`/etc/bureau-simplifie/maj.conf`** :
 DEPOT="vous/bureau-simplifie"   # dépôt GitHub (propriétaire/nom)
 PAQUET="bureau-simplifie"       # nom du paquet Debian
 ACTIVER=1                       # 1 = mises à jour automatiques, 0 = non
+UTILISATEUR="mamie"             # utilisateur du kiosque (pour ses réglages)
 ```
 
 - L'installateur **déduit `DEPOT` tout seul** : l'adresse du dépôt est gravée
@@ -287,7 +288,13 @@ ACTIVER=1                       # 1 = mises à jour automatiques, 0 = non
   `src-tauri/tauri.conf.json` qui est utilisée : remplacez-y `VOTRE-COMPTE`.)
 - `--sans-maj` installe le reste sans activer les mises à jour (équivaut à
   `ACTIVER=0`).
-- Pour les désactiver plus tard : passez `ACTIVER=0` dans ce fichier.
+- `ACTIVER=0` est un **verrou administrateur** : plus aucune vérification n'a
+  lieu, quel que soit le réglage de l'utilisateur.
+- **L'interrupteur « Mise à jour automatique »** de l'écran *Paramètres* laisse
+  l'utilisateur couper la vérification au démarrage sans toucher au système : il
+  écrit simplement `majAuto` dans ses réglages, que le programme de mise à jour
+  relit pour l'utilisateur indiqué par `UTILISATEUR`. Un `ACTIVER=0` posé par
+  l'administrateur reste prioritaire.
 
 > **Sécurité** : la mise à jour n'installe que des `.deb` provenant du dépôt
 > configuré, et vérifie le nom du paquet avant d'installer. Elle se fait en
@@ -315,7 +322,7 @@ Pour en sortir : **5 clics rapides sur l'heure** en haut à gauche, ou
 ## Personnalisation
 
 L'écran **Paramètres** (tuile du même nom) se veut volontairement minimal. Il ne
-contient que trois réglages, ceux dont on se sert vraiment :
+contient que les réglages dont on se sert vraiment :
 
 - **Luminosité** de l'écran (via `brightnessctl`) — la ligne est masquée
   automatiquement si l'écran n'a pas de rétroéclairage réglable (moniteur
@@ -323,6 +330,8 @@ contient que trois réglages, ceux dont on se sert vraiment :
   charge).
 - **Volume** sonore.
 - **Ville** utilisée pour la météo.
+- **Mise à jour automatique** : un interrupteur pour couper (ou rallumer) la
+  vérification faite au démarrage (voir « Mises à jour automatiques »).
 
 Le reste (taille du texte, thème, verrouillage, édition des tuiles) n'est plus
 exposé dans l'interface. Les tuiles par défaut — quatre seulement : Internet, Mes

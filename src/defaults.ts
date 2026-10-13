@@ -51,5 +51,6 @@ export const DEFAULT_SETTINGS: Settings = {
   volume: 60,
   city: "Paris",
   kiosk: false,
+  majAuto: true,
   shortcuts: DEFAULT_SHORTCUTS,
 };

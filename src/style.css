@@ -61,6 +61,10 @@
   --field-text: #333333;
   --field-placeholder: #9d9d9d;
   --field-inset: rgba(0, 0, 0, 0.06);
+
+  --switch-off: #cdcdcd;
+  --switch-border: #adadad;
+  --switch-knob: #ffffff;
 }
 
 [data-theme="sombre"] {
@@ -87,6 +91,10 @@
   --field-text: #fafafa;
   --field-placeholder: #8a8a8a;
   --field-inset: rgba(0, 0, 0, 0.35);
+
+  --switch-off: #4a4a4a;
+  --switch-border: #555555;
+  --switch-knob: #fafafa;
 }
 
 [data-theme="contraste"] {
@@ -114,6 +122,10 @@
   --field-text: #ffffff;
   --field-placeholder: #c9c9c9;
   --field-inset: transparent;
+
+  --switch-off: #000000;
+  --switch-border: #ffffff;
+  --switch-knob: #ffffff;
 }
 
 html {
@@ -464,6 +476,82 @@ input[type="range"] {
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Interrupteur (mise à jour automatique) : même langage visuel que les
+   boutons — fin liseré, léger creux — avec la pastille bleue elementary
+   une fois activé. */
+.field--switch {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+/* Case à cocher invisible : c'est toute la ligne qui sert de zone de clic. */
+.switch__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.switch__track {
+  position: relative;
+  display: block;
+  width: 3.4rem;
+  height: 1.9rem;
+  background: var(--switch-off);
+  border: 1px solid var(--switch-border);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 2px var(--field-inset);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.switch__knob {
+  position: absolute;
+  top: 50%;
+  left: 0.2rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  background: var(--switch-knob);
+  border: 1px solid var(--switch-border);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transform: translateY(-50%);
+  transition: transform 0.15s ease;
+}
+
+.switch:hover .switch__track {
+  border-color: var(--button-border-hover);
+}
+
+.switch__input:checked + .switch__track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch__input:checked + .switch__track .switch__knob {
+  border-color: transparent;
+  transform: translateY(-50%) translateX(1.6rem);
+}
+
+.switch__input:checked:hover + .switch__track {
+  border-color: var(--accent);
+}
+
+.switch__input:focus-visible + .switch__track {
+  box-shadow: inset 0 1px 2px var(--field-inset), 0 0 0 3px var(--focus-ring);
 }
 
 /* ------------------------- Numérisation (Imprimante) --------------------- */

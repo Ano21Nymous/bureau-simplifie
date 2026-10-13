@@ -30,5 +30,13 @@ export interface Settings {
   lon?: number;
   /** Mode kiosque : plein écran, sans décorations, toujours au premier plan. */
   kiosk: boolean;
+  /**
+   * Mise à jour automatique au démarrage (Linux/kiosque).
+   *
+   * Le programme de mise à jour tourne en root avant la session graphique :
+   * il relit ce champ dans le fichier de réglages de l'utilisateur pour savoir
+   * s'il doit vérifier les nouvelles versions.
+   */
+  majAuto: boolean;
   shortcuts: Shortcut[];
 }

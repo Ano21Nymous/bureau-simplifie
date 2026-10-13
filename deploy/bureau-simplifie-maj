@@ -16,6 +16,9 @@ CONF="/etc/bureau-simplifie/maj.conf"
 PAQUET="bureau-simplifie"
 DEPOT=""
 ACTIVER=1
+# Utilisateur du kiosque : permet de retrouver ses réglages (interrupteur
+# « Mise à jour automatique » de l'écran Paramètres).
+UTILISATEUR=""
 
 if [ -r "$CONF" ]; then
   # shellcheck disable=SC1090
@@ -31,6 +34,18 @@ warn() { printf 'maj: /!\\ %s\n' "$*" >&2; }
 if [ "$ACTIVER" != "1" ]; then
   log "mise à jour automatique désactivée (ACTIVER=$ACTIVER)"
   exit 0
+fi
+
+# Interrupteur « Mise à jour automatique » de l'écran Paramètres : le réglage
+# est écrit par l'application dans le fichier de configuration de l'utilisateur
+# du kiosque. Champ absent (ou fichier absent) => mise à jour maintenue.
+if [ -n "$UTILISATEUR" ]; then
+  REGLAGES="/home/$UTILISATEUR/.config/fr.bureau.simplifie/settings.json"
+  if [ -r "$REGLAGES" ] \
+     && grep -Eq '"majAuto"[[:space:]]*:[[:space:]]*false' "$REGLAGES"; then
+    log "mise à jour automatique désactivée depuis les paramètres de $UTILISATEUR"
+    exit 0
+  fi
 fi
 
 if [ -z "$DEPOT" ]; then

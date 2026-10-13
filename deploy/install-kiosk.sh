@@ -48,7 +48,8 @@ Options :
                 Dépôt GitHub d'où proviennent les mises à jour automatiques
                 (par défaut : déduit de l'application installée).
   --sans-maj    Ne pas mettre à jour l'application automatiquement au
-                démarrage.
+                démarrage. (L'utilisateur peut aussi l'activer ou la
+                désactiver à tout moment depuis l'écran Paramètres.)
   -h, --help    Affiche cette aide.
 
 Exemples :
@@ -350,7 +351,11 @@ DEPOT="$DEPOT"
 # Nom du paquet Debian installé.
 PAQUET="bureau-simplifie"
 # Mise à jour automatique au démarrage : 1 = oui, 0 = non.
+# (L'utilisateur peut aussi la désactiver depuis l'écran Paramètres.)
 ACTIVER=$MAJ_ACTIVE
+# Utilisateur du kiosque, dont les réglages contiennent l'interrupteur
+# « Mise à jour automatique ».
+UTILISATEUR="$KIOSK_USER"
 CONF
 install -m 0644 "$SCRIPT_DIR/bureau-simplifie-maj.service" \
   /etc/systemd/system/bureau-simplifie-maj.service
@@ -407,6 +412,8 @@ cat <<EOF
    - forcer une vérification :  sudo bureau-simplifie-maj
    - voir le journal :          journalctl -u bureau-simplifie-maj
    - désactiver : modifier ACTIVER=0 dans /etc/bureau-simplifie/maj.conf
+      (ou, au quotidien, l'interrupteur « Mise à jour automatique »
+       de l'écran Paramètres)
 
  DÉSINSTALLER le kiosque :
    sudo systemctl disable --now bureau-simplifie-maj.service
