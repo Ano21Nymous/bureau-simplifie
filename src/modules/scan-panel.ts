@@ -45,7 +45,7 @@ export function openScanPanel(): void {
 
     const saveButton = document.createElement("button");
     saveButton.type = "button";
-    saveButton.className = "button button--secondary";
+    saveButton.className = "button";
     saveButton.textContent = "Télécharger";
     saveButton.disabled = true; // rien à enregistrer tant qu'on n'a rien scanné
 

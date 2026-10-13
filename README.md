@@ -283,6 +283,13 @@ L'interface reprend la **palette et les codes visuels d'[elementary OS](https://
 cartes blanches à coins arrondis, ombres douces, accent **Blueberry** `#3689e6`,
 typographie légère pour l'heure.
 
+Les **boutons** reprennent le style « classique » d'elementary : dégradé vertical
+clair (`#ffffff` → `#e6e6e6`), fin liseré gris, léger reflet intérieur, et des
+états survol / appui discrets. Ce style est **unique et partagé** par tous les
+boutons ; les couleurs sont redéfinies pour chaque thème (dans `:root`,
+`[data-theme="sombre"]` et `[data-theme="contraste"]`). Les *tuiles*, elles,
+restent des cartes blanches : ce sont les applications, pas des boutons.
+
 Les icônes des tuiles et de la météo proviennent des projets
 [`elementary/icons`](https://github.com/elementary/icons) et
 [`elementary/mail`](https://github.com/elementary/mail) (voir

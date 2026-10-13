@@ -34,12 +34,23 @@
   --text-soft: var(--silver-900);
   --border: var(--silver-300);
   --accent: var(--blueberry-500);
-  --accent-strong: var(--blueberry-700);
   --danger: var(--strawberry-500);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 3px 10px rgba(0, 0, 0, 0.06);
   --shadow-high: 0 6px 18px rgba(0, 0, 0, 0.14);
   --radius: 0.85rem;
   --radius-lg: 1rem;
+
+  /* --- Boutons (style elementary OS) --------------------------------- */
+  /* Dégradé vertical clair, fin liseré et reflet intérieur : le bouton
+     « classique » d'elementary. Chaque thème redéfinit ces valeurs. */
+  --button-top: #ffffff;
+  --button-bottom: #e6e6e6;
+  --button-bottom-hover: #d4d4d4;
+  --button-border: #adadad;
+  --button-border-hover: #888888;
+  --button-text: #333333;
+  --button-inset: rgba(255, 255, 255, 0.6);
+  --button-radius: 0.3rem;
 }
 
 [data-theme="sombre"] {
@@ -51,6 +62,14 @@
   --border: #454545;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 3px 10px rgba(0, 0, 0, 0.35);
   --shadow-high: 0 6px 18px rgba(0, 0, 0, 0.55);
+
+  --button-top: #454545;
+  --button-bottom: #363636;
+  --button-bottom-hover: #4a4a4a;
+  --button-border: #555555;
+  --button-border-hover: #6e6e6e;
+  --button-text: #fafafa;
+  --button-inset: rgba(255, 255, 255, 0.07);
 }
 
 [data-theme="contraste"] {
@@ -62,6 +81,15 @@
   --border: #ffffff;
   --shadow: none;
   --shadow-high: none;
+
+  /* Thème contrasté : pas de dégradé, uniquement des bords nets. */
+  --button-top: #000000;
+  --button-bottom: #000000;
+  --button-bottom-hover: #1a1a1a;
+  --button-border: #ffffff;
+  --button-border-hover: #ffe259;
+  --button-text: #ffffff;
+  --button-inset: transparent;
 }
 
 html {
@@ -265,22 +293,34 @@ body {
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
+  padding: 0;
   font: inherit;
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   line-height: 1;
-  color: var(--text);
-  background: transparent;
-  border: none;
-  border-radius: 50%;
+  color: var(--button-text);
+  background-color: var(--button-bottom);
+  background-image: linear-gradient(to bottom, var(--button-top) 0%, var(--button-bottom) 100%);
+  border: 1px solid var(--button-border);
+  border-radius: var(--button-radius);
+  box-shadow: inset 0 1px 0 var(--button-inset);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.panel__close:hover,
+.panel__close:hover {
+  background-image: linear-gradient(to bottom, var(--button-top) 0%, var(--button-bottom-hover) 100%);
+  border-color: var(--button-border-hover);
+}
+
+.panel__close:active {
+  background-image: linear-gradient(to bottom, var(--button-bottom-hover) 0%, var(--button-bottom) 100%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
 .panel__close:focus-visible {
-  color: #ffffff;
-  background: var(--danger);
   outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(54, 137, 230, 0.3), inset 0 1px 0 var(--button-inset);
 }
 
 .panel__body {
@@ -354,39 +394,41 @@ input[type="range"] {
   box-shadow: 0 0 0 3px rgba(54, 137, 230, 0.25);
 }
 
+/* Boutons : style elementary OS — dégradé vertical clair, fin liseré et
+   léger reflet intérieur. Un seul style, identique pour tous les boutons. */
 .button {
   font: inherit;
   font-size: 1.1rem;
-  font-weight: 600;
-  padding: 0.7rem 1.3rem;
-  color: #ffffff;
-  background: var(--accent);
-  border: none;
-  border-radius: 0.6rem;
+  font-weight: 500;
+  padding: 0.7rem 1.4rem;
+  color: var(--button-text);
+  background-color: var(--button-bottom);
+  background-image: linear-gradient(to bottom, var(--button-top) 0%, var(--button-bottom) 100%);
+  border: 1px solid var(--button-border);
+  border-radius: var(--button-radius);
+  box-shadow: inset 0 1px 0 var(--button-inset);
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .button:hover {
-  background: var(--accent-strong);
+  background-image: linear-gradient(to bottom, var(--button-top) 0%, var(--button-bottom-hover) 100%);
+  border-color: var(--button-border-hover);
 }
 
-.button--danger {
-  background: var(--danger);
+.button:active {
+  background-image: linear-gradient(to bottom, var(--button-bottom-hover) 0%, var(--button-bottom) 100%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
-.button--secondary {
-  color: var(--text);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-}
-
-.button--secondary:hover {
-  background: var(--border);
+.button:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(54, 137, 230, 0.3), inset 0 1px 0 var(--button-inset);
 }
 
 .button:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
