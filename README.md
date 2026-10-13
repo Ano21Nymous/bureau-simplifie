@@ -73,7 +73,14 @@ continue s'en charge**. Le workflow `.github/workflows/build.yml` :
 2. compile sur `ubuntu-22.04` et produit les paquets **`.deb`**, **`.rpm`** et
    **`.AppImage`** ;
 3. compile aussi un installateur Windows **`.exe`** (pratique pour tester) ;
-4. publie les paquets dans les *artifacts* du workflow.
+4. publie les paquets dans les *artifacts* du workflow ;
+5. **à chaque `push` sur `main`, crée une version publiée** (*GitHub Release*),
+   étiquetée `v0.1.<numéro de construction>`, avec le `.deb` en pièce jointe.
+
+> Le numéro de version est calculé automatiquement : la partie `majeure.mineure`
+> vient de `tauri.conf.json`, la dernière partie est le numéro de construction
+> GitHub. Pousser sur `main` suffit donc à publier une nouvelle version ; les
+> tags `vX.Y.Z` restent possibles pour fixer soi-même la version.
 
 Pour l'activer :
 
@@ -86,21 +93,17 @@ git remote add origin https://github.com/<vous>/bureau-simplifie.git
 git push -u origin main
 ```
 
-Ensuite, l'onglet **Actions** de GitHub produit les paquets à chaque `push`.
-Pour créer une « release » propre, poussez un tag :
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
+L'onglet **Actions** produit alors les paquets, et l'onglet **Releases** de
+GitHub liste les versions publiées, chacune avec son `.deb`. C'est cette liste
+que consultent les machines pour se mettre à jour (voir la section suivante).
 
 ## Installer sur l'ordinateur de destination (Linux)
 
 Récupérez le `.AppImage` (le plus simple) :
 
 ```bash
-chmod +x Bureau_Simplifie_0.1.0_amd64.AppImage
-./Bureau_Simplifie_0.1.0_amd64.AppImage
+chmod +x "Bureau Simplifie_0.1.0_amd64.AppImage"
+./"Bureau Simplifie_0.1.0_amd64.AppImage"
 ```
 
 Ou le `.deb` :
@@ -109,6 +112,15 @@ Ou le `.deb` :
 sudo dpkg -i bureau-simplifie_0.1.0_amd64.deb
 sudo apt -f install   # si des dépendances manquent
 ```
+
+> **Pourquoi le paquet s'appelle `bureau-simplifie`** et non « Bureau Simplifié » ?
+> Un nom de paquet Debian ne peut contenir que `a-z`, `0-9`, `+`, `-` et `.`.
+> Un accent ferait produire à Tauri un paquet… qui refuse de s'installer
+> (bogue connu : [tauri#14366](https://github.com/tauri-apps/tauri/issues/14366)).
+> Le `productName` de `src-tauri/tauri.conf.json` est donc écrit **sans accent**,
+> et la CI renomme l'archive en `bureau-simplifie_<version>_amd64.deb`. Le nom
+> *affiché*, lui, reste bien « Bureau Simplifié » (titre de fenêtre, session
+> kiosque, menu des applications).
 
 ## Machine dédiée : kiosque plein écran (Debian + SDDM)
 
@@ -121,6 +133,9 @@ Tout est prêt dans le dossier **`deploy/`** :
 ```
 deploy/
 ├─ install-kiosk.sh                 Installateur (à lancer sur le Debian)
+├─ bureau-simplifie-maj             Vérification / mise à jour automatique
+├─ bureau-simplifie-maj.service     Service systemd (au démarrage)
+├─ definir-version.mjs              Écrit la version dans les fichiers (CI)
 ├─ bureau-simplifie-session         Session Wayland via cage (kiosque)
 ├─ bureau-simplifie-x-session       Session X11 via matchbox (repli matériel)
 ├─ bureau-simplifie.desktop         Session Wayland pour SDDM
@@ -154,8 +169,10 @@ Ce que fait le script :
 | Polices | `fonts-noto-color-emoji` : utile pour les tuiles ajoutées avec un émoji (les tuiles par défaut, elles, utilisent des icônes SVG). |
 | Démarrage silencieux | `--quiet-boot` masque GRUB et affiche un écran de démarrage à la place du défilé de messages. |
 | Veille | La mise en veille automatique est désactivée : le bureau reste toujours visible. |
+| Mises à jour | `curl` + `ca-certificates` : la machine vérifie et installe les nouvelles versions au démarrage (voir *Mises à jour automatiques*). |
 
-Options : `--x11`, `--with-apps`, `--quiet-boot`, `--no-sddm`, `--help`.
+Options : `--x11`, `--with-apps`, `--quiet-boot`, `--no-sddm`,
+`--depot <propriétaire>/<nom>`, `--sans-maj`, `--help`.
 
 ### Comment l'illusion tient
 
@@ -211,13 +228,78 @@ en commentaire en tête du fichier.
 ### Désinstaller le kiosque
 
 ```bash
+sudo systemctl disable --now bureau-simplifie-maj.service
 sudo rm -f /etc/sddm.conf.d/10-bureau-simplifie.conf \
            /etc/systemd/logind.conf.d/10-bureau-simplifie.conf \
+           /etc/systemd/system/bureau-simplifie-maj.service \
+           /etc/bureau-simplifie/maj.conf \
            /usr/local/bin/bureau-simplifie-session \
            /usr/local/bin/bureau-simplifie-x-session \
+           /usr/local/bin/bureau-simplifie-maj \
            /usr/share/wayland-sessions/bureau-simplifie.desktop \
            /usr/share/xsessions/bureau-simplifie-x.desktop
+sudo systemctl daemon-reload
 ```
+
+## Mises à jour automatiques
+
+Objectif : **pousser sur GitHub, et la machine de mamie se met à jour toute
+seule** au démarrage suivant. Aucune manipulation de sa part, aucune invitation
+à cliquer, rien à répondre.
+
+Le principe est volontairement simple, et n'ajoute **aucune dépendance à
+l'application** (pas de greffon Tauri, pas de bibliothèque) :
+
+1. **Côté développement** : chaque `push` sur `main` déclenche la CI, qui
+   construit le `.deb` et crée une version publiée `v0.1.<n>` (voir plus haut).
+2. **Côté machine** : le service `bureau-simplifie-maj.service` s'exécute au
+   démarrage, **avant la session graphique** (donc l'application démarre
+   directement dans la bonne version). Il :
+
+   - lit la version installée (`dpkg-query`) ;
+   - interroge la dernière version publiée sur GitHub ;
+   - les compare (`dpkg --compare-versions`) ;
+   - si la version publiée est plus récente, télécharge son `.deb`, vérifie qu'il
+     s'agit bien du bon paquet, puis l'installe.
+
+Le script `deploy/bureau-simplifie-maj` est celui qui travaille ; il est
+utilisable à la main :
+
+```bash
+sudo bureau-simplifie-maj              # vérifier et mettre à jour maintenant
+journalctl -u bureau-simplifie-maj     # voir ce qui s'est passé au démarrage
+```
+
+### Configuration
+
+Tout tient dans **`/etc/bureau-simplifie/maj.conf`** :
+
+```sh
+DEPOT="vous/bureau-simplifie"   # dépôt GitHub (propriétaire/nom)
+PAQUET="bureau-simplifie"       # nom du paquet Debian
+ACTIVER=1                       # 1 = mises à jour automatiques, 0 = non
+```
+
+- L'installateur **déduit `DEPOT` tout seul** : l'adresse du dépôt est gravée
+  dans le `.deb` au moment de la construction (champ `Homepage`), et relue à
+  l'installation. On peut la forcer avec `--depot <propriétaire>/<nom>`.
+  (En construction locale, hors CI, c'est la valeur de `bundle.homepage` dans
+  `src-tauri/tauri.conf.json` qui est utilisée : remplacez-y `VOTRE-COMPTE`.)
+- `--sans-maj` installe le reste sans activer les mises à jour (équivaut à
+  `ACTIVER=0`).
+- Pour les désactiver plus tard : passez `ACTIVER=0` dans ce fichier.
+
+> **Sécurité** : la mise à jour n'installe que des `.deb` provenant du dépôt
+> configuré, et vérifie le nom du paquet avant d'installer. Elle se fait en
+> HTTPS. Comme pour toute mise à jour automatique, gardez la main sur ce que
+> vous publiez sur `main` : c'est ce qui partira sur la machine.
+>
+> **Pas de réseau ?** La vérification échoue proprement : la machine démarre
+> normalement sur sa version actuelle, et réessaiera au prochain démarrage.
+>
+> **Portée** : seuls le paquet de l'application voyagent ainsi. Les scripts de
+> session et l'installateur (dossier `deploy/`) ne sont pas concernés : si vous
+> les modifiez, relancez `install-kiosk.sh` sur la machine.
 
 ## Le mode kiosque dans l'application
 
@@ -331,13 +413,16 @@ l'application est un jour distribuée publiquement.
 │  └─ icons/                   Icônes (générées depuis app-icon.svg)
 ├─ deploy/                     Déploiement kiosque Debian + SDDM
 │  ├─ install-kiosk.sh         Installateur (à lancer sur la machine cible)
+│  ├─ bureau-simplifie-maj     Vérification / mise à jour au démarrage
+│  ├─ bureau-simplifie-maj.service      Service systemd associé
+│  ├─ definir-version.mjs      Écrit la version dans les fichiers (CI)
 │  ├─ bureau-simplifie-session Session Wayland (cage)
 │  ├─ bureau-simplifie-x-session       Session X11 (matchbox)
 │  ├─ *.desktop                Sessions pour SDDM
 │  ├─ sddm-*.conf              Connexion automatique
 │  ├─ logind-*.conf            Pas de veille automatique
 │  └─ bureau-simplifie.service Variante sans gestionnaire de connexion
-└─ .github/workflows/build.yml Compilation Linux/Windows
+└─ .github/workflows/build.yml Compilation + publication d'une version
 ```
 
 ## Notes de sécurité

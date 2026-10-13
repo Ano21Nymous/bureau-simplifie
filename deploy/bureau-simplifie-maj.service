@@ -1,0 +1,22 @@
+[Unit]
+Description=Bureau Simplifié — mise à jour automatique
+Documentation=https://github.com/VOTRE-COMPTE/bureau-simplifie
+# Se lance au démarrage, une fois le réseau disponible, et avant la session
+# graphique : l'application démarre donc déjà dans sa version à jour.
+After=network-online.target
+Wants=network-online.target
+Before=display-manager.service sddm.service
+ConditionPathExists=/etc/bureau-simplifie/maj.conf
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/bureau-simplifie-maj
+# Large : le temps du téléchargement d'un nouveau paquet sur un lien lent.
+TimeoutStartSec=600
+Nice=10
+# Une mise à jour impossible (hors ligne, échec) ne doit pas bloquer le
+# démarrage ni marquer le service en échec.
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target

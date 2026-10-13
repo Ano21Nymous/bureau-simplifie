@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+#
+# Bureau Simplifié — mise à jour automatique.
+#
+# Compare la version installée à la dernière version publiée sur GitHub et, si
+# une version plus récente existe, télécharge et installe le paquet .deb.
+#
+# Lancé automatiquement au démarrage par bureau-simplifie-maj.service, avant
+# la session graphique. Utilisable aussi à la main :
+#
+#   sudo bureau-simplifie-maj        # vérifie et met à jour si besoin
+#
+set -uo pipefail
+
+CONF="/etc/bureau-simplifie/maj.conf"
+PAQUET="bureau-simplifie"
+DEPOT=""
+ACTIVER=1
+
+if [ -r "$CONF" ]; then
+  # shellcheck disable=SC1090
+  . "$CONF"
+fi
+
+log()  { printf 'maj: %s\n' "$*"; }
+ok()   { printf 'maj: ok  %s\n' "$*"; }
+warn() { printf 'maj: /!\\ %s\n' "$*" >&2; }
+
+[ "$(id -u)" -eq 0 ] || { warn "à lancer en root : sudo bureau-simplifie-maj"; exit 1; }
+
+if [ "$ACTIVER" != "1" ]; then
+  log "mise à jour automatique désactivée (ACTIVER=$ACTIVER)"
+  exit 0
+fi
+
+if [ -z "$DEPOT" ]; then
+  warn "aucun dépôt configuré dans $CONF : rien à vérifier."
+  exit 0
+fi
+
+command -v curl >/dev/null 2>&1 || { warn "curl introuvable : installez-le (apt install curl)"; exit 1; }
+command -v dpkg >/dev/null 2>&1 || { warn "dpkg introuvable : ce script vise Debian/Ubuntu"; exit 1; }
+
+# Version actuellement installée.
+INSTALLE="$(dpkg-query -W -f='${Version}' "$PAQUET" 2>/dev/null || true)"
+if [ -z "$INSTALLE" ]; then
+  warn "le paquet « $PAQUET » n'est pas installé : rien à mettre à jour."
+  exit 0
+fi
+
+log "version installée : $INSTALLE"
+
+# Dernière version publiée (interface GitHub). Quelques essais espacés : au
+# démarrage, le réseau n'est pas toujours prêt à la première tentative.
+API="https://api.github.com/repos/$DEPOT/releases/latest"
+JSON=""
+essai=0
+while [ "$essai" -lt 3 ]; do
+  essai=$((essai + 1))
+  if JSON="$(curl -fsSL --max-time 10 -H 'Accept: application/vnd.github+json' "$API" 2>/dev/null)"; then
+    break
+  fi
+  JSON=""
+  [ "$essai" -lt 3 ] && sleep 2
+done
+
+if [ -z "$JSON" ]; then
+  warn "impossible de joindre GitHub (pas de réseau ?) : mise à jour ignorée."
+  exit 0
+fi
+
+TAG="$(printf '%s\n' "$JSON" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
+DISTANT="${TAG#v}"
+
+if [ -z "$DISTANT" ]; then
+  warn "réponse de GitHub illisible : mise à jour ignorée."
+  exit 0
+fi
+
+log "version publiée   : $DISTANT"
+
+if ! dpkg --compare-versions "$DISTANT" gt "$INSTALLE"; then
+  ok "déjà à jour, rien à faire."
+  exit 0
+fi
+
+log "nouvelle version disponible : $INSTALLE -> $DISTANT"
+
+# Adresse du paquet .deb dans la publication.
+URL="$(printf '%s\n' "$JSON" \
+  | grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*amd64\.deb"' \
+  | head -n 1 | sed -E 's/.*"(https[^"]*)"/\1/')"
+
+if [ -z "$URL" ]; then
+  URL="$(printf '%s\n' "$JSON" \
+    | grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*\.deb"' \
+    | head -n 1 | sed -E 's/.*"(https[^"]*)"/\1/')"
+fi
+
+if [ -z "$URL" ]; then
+  warn "aucun paquet .deb dans la publication : mise à jour ignorée."
+  exit 0
+fi
+
+TMP="$(mktemp --suffix=.deb)" || { warn "mktemp a échoué"; exit 1; }
+trap 'rm -f "$TMP"' EXIT
+
+log "téléchargement de $(basename "$URL")"
+if ! curl -fsSL --max-time 300 -o "$TMP" "$URL"; then
+  warn "téléchargement échoué : mise à jour ignorée."
+  exit 0
+fi
+
+# Garde-fous : n'installer qu'un vrai paquet .deb, et au bon nom.
+if ! dpkg-deb --info "$TMP" >/dev/null 2>&1; then
+  warn "le fichier téléchargé n'est pas un paquet .deb valide : abandon."
+  exit 0
+fi
+
+NOM_PAQUET="$(dpkg-deb -f "$TMP" Package 2>/dev/null || true)"
+if [ "$NOM_PAQUET" != "$PAQUET" ]; then
+  warn "le paquet téléchargé s'appelle « $NOM_PAQUET » au lieu de « $PAQUET » : abandon."
+  exit 0
+fi
+
+log "installation du nouveau paquet"
+if DEBIAN_FRONTEND=noninteractive apt-get install -y "$TMP"; then
+  ok "mise à jour terminée : $(dpkg-query -W -f='${Version}' "$PAQUET" 2>/dev/null)"
+else
+  warn "l'installation a échoué : la version précédente reste en place."
+  exit 1
+fi

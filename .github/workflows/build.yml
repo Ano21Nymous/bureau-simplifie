@@ -7,6 +7,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Nécessaire pour créer une version publiée (GitHub Release) à chaque push.
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -58,12 +62,50 @@ jobs:
       - name: Vérifier les types
         run: npm run typecheck
 
+      # Chaque construction reçoit un numéro de version unique :
+      #   - poussée sur main   -> majeure.mineure.numéro-de-construction (0.1.42)
+      #   - étiquette vX.Y.Z   -> la version de l'étiquette
+      #   - pull request       -> la version de base, sans publication
+      # L'adresse du dépôt est aussi gravée dans le paquet : l'installateur la
+      # relit pour configurer les mises à jour automatiques.
+      - name: Définir la version et le dépôt
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' src-tauri/tauri.conf.json | head -n 1)
+          MAJ_MIN=$(printf '%s' "$BASE" | cut -d. -f1,2)
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            VERSION="$BASE"
+          else
+            VERSION="${MAJ_MIN}.${GITHUB_RUN_NUMBER}"
+          fi
+          node deploy/definir-version.mjs "$VERSION" "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Compiler l'application
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --bundles ${{ matrix.bundles }}
+
+      # Le nom de fichier par défaut reprend le « productName » (espaces
+      # compris). On le normalise en « bureau-simplifie_<version>_amd64.deb » :
+      # c'est ce nom que la mise à jour automatique télécharge.
+      - name: Normaliser le nom du paquet Debian
+        if: matrix.platform == 'ubuntu-22.04'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="src-tauri/target/release/bundle/deb"
+          for fichier in "$bundle"/*.deb; do
+            [ -e "$fichier" ] || continue
+            mv "$fichier" "$bundle/bureau-simplifie_${{ steps.version.outputs.version }}_amd64.deb"
+          done
+          ls -l "$bundle"
 
       - name: Publier les paquets Linux
         if: matrix.platform == 'ubuntu-22.04'
@@ -83,3 +125,20 @@ jobs:
           name: paquet-windows
           path: src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: warn
+
+      # La « version » officielle : c'est elle que la machine de mamie
+      # interroge au démarrage pour savoir si une mise à jour existe.
+      - name: Créer la version publiée
+        if: matrix.platform == 'ubuntu-22.04' && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Bureau Simplifié ${{ steps.version.outputs.version }}
+          body: |
+            Version ${{ steps.version.outputs.version }}, construite automatiquement.
+
+            Le paquet `bureau-simplifie_${{ steps.version.outputs.version }}_amd64.deb`
+            est installé automatiquement au démarrage par les machines configurées.
+          files: |
+            src-tauri/target/release/bundle/deb/*.deb
+          fail_on_unmatched_files: true
