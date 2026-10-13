@@ -2,8 +2,9 @@ import type { Settings, Shortcut } from "./types";
 
 /**
  * Raccourcis par défaut, pensés pour une utilisation sous Linux.
- * Les commandes sont celles des environnements de bureau courants ;
- * elles restent modifiables depuis l'écran « Réglages ».
+ *
+ * Volontairement très courts : quatre grosses tuiles seulement. Les commandes
+ * restent modifiables depuis l'écran « Paramètres ».
  */
 export const DEFAULT_SHORTCUTS: Shortcut[] = [
   {
@@ -24,54 +25,23 @@ export const DEFAULT_SHORTCUTS: Shortcut[] = [
     color: "#c0392b",
   },
   {
-    id: "photos",
-    label: "Mes photos",
-    kind: "app",
-    target: "pcmanfm",
-    args: ["~/Images"],
-    emoji: "🖼️",
-    color: "#8e44ad",
+    // Action interne : lance le logiciel de numérisation.
+    // (L'impression sera ajoutée plus tard.)
+    id: "imprimante",
+    label: "Imprimante",
+    kind: "action",
+    target: "scan",
+    emoji: "🖨️",
+    color: "#7f8c8d",
   },
   {
-    id: "musique",
-    label: "Ma musique",
-    kind: "app",
-    target: "audacious",
-    emoji: "🎵",
-    color: "#16a085",
-  },
-  {
-    id: "calcul",
-    label: "Calculatrice",
-    kind: "app",
-    target: "galculator",
-    emoji: "🔢",
+    // Action interne : ouvre l'écran des paramètres.
+    id: "parametres",
+    label: "Paramètres",
+    kind: "action",
+    target: "settings",
+    emoji: "⚙️",
     color: "#2c3e50",
-  },
-  {
-    id: "fichiers",
-    label: "Mes fichiers",
-    kind: "app",
-    target: "pcmanfm",
-    args: ["~/"],
-    emoji: "📁",
-    color: "#d68910",
-  },
-  {
-    id: "actu",
-    label: "Les infos",
-    kind: "url",
-    target: "https://www.francetvinfo.fr",
-    emoji: "📰",
-    color: "#34495e",
-  },
-  {
-    id: "videos",
-    label: "Vidéos",
-    kind: "url",
-    target: "https://www.youtube.com",
-    emoji: "📺",
-    color: "#c0392b",
   },
 ];
 

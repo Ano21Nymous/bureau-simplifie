@@ -1,10 +1,9 @@
 import { DEFAULT_SETTINGS } from "./defaults";
 import { isTauri, kioskOverride, loadSettings, quitApp, saveSettings, setKiosk, setVolume } from "./ipc";
-import type { Settings } from "./types";
-import { runAction, runShortcut } from "./modules/actions";
-import { openSitePanel } from "./modules/browser-panel";
+import type { Settings, Shortcut } from "./types";
+import { runShortcut } from "./modules/actions";
 import { startClock } from "./modules/clock";
-import { renderDock, renderGrid } from "./modules/launcher";
+import { renderGrid } from "./modules/launcher";
 import { openSettingsPanel } from "./modules/settings-panel";
 import { toast } from "./modules/toast";
 import { fetchWeather } from "./modules/weather";
@@ -35,10 +34,23 @@ function persist(): void {
   }, 400);
 }
 
+/**
+ * Point d'entrée d'une tuile.
+ *
+ * Les actions internes au bureau (par exemple « Paramètres ») sont traitées
+ * ici, car elles ont besoin de l'état de l'application ; tout le reste
+ * (application, site internet, action système) part vers runShortcut.
+ */
+function handleShortcut(shortcut: Shortcut): void {
+  if (shortcut.kind === "action" && shortcut.target === "settings") {
+    openSettings();
+    return;
+  }
+  void runShortcut(shortcut);
+}
+
 function renderAll(): void {
-  renderGrid(settings.shortcuts, (shortcut) => {
-    void runShortcut(shortcut);
-  });
+  renderGrid(settings.shortcuts, handleShortcut);
 }
 
 function openSettings(): void {
@@ -57,23 +69,6 @@ function openSettings(): void {
       void quitApp();
     },
   });
-}
-
-function handleDock(action: string): void {
-  switch (action) {
-    case "sites":
-      openSitePanel(settings.shortcuts);
-      return;
-    case "settings":
-      openSettings();
-      return;
-    case "scan":
-    case "print":
-      void runAction(action);
-      return;
-    default:
-      toast(`Action inconnue : ${action}`, "error");
-  }
 }
 
 async function refreshWeather(): Promise<void> {
@@ -174,7 +169,6 @@ async function init(): Promise<void> {
 
   applyAppearance();
   renderAll();
-  renderDock(handleDock);
   startClock();
   setupKioskExit();
   setupShortcuts();

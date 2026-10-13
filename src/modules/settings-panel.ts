@@ -54,7 +54,7 @@ export function openSettingsPanel(context: SettingsPanelContext): void {
     context.onChange(current);
   };
 
-  openOverlay("Réglages", (body) => {
+  openOverlay("Paramètres", (body) => {
     // ------------------------- Confort de lecture -------------------------
     const display = section("Confort de lecture");
 
@@ -202,16 +202,28 @@ export function openSettingsPanel(context: SettingsPanelContext): void {
           shortcut.kind === "app" ? "application" : shortcut.kind === "url" ? "site" : "action";
         info.textContent = `${shortcut.label} (${kindLabel}) — ${shortcut.target}`;
 
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "shortcut-row__remove";
-        remove.textContent = "Retirer";
-        remove.addEventListener("click", () => {
-          update({ shortcuts: current.shortcuts.filter((item) => item.id !== shortcut.id) });
-          renderList();
-        });
+        row.append(emoji, info);
 
-        row.append(emoji, info, remove);
+        // Les actions internes (« Paramètres », « Imprimante »…) sont
+        // indispensables au bureau : on ne peut pas les retirer, sans quoi on
+        // se retrouverait sans accès aux réglages ni au bouton « Quitter ».
+        if (shortcut.kind === "action") {
+          const fixed = document.createElement("span");
+          fixed.className = "shortcut-row__fixed";
+          fixed.textContent = "Toujours présent";
+          row.append(fixed);
+        } else {
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "shortcut-row__remove";
+          remove.textContent = "Retirer";
+          remove.addEventListener("click", () => {
+            update({ shortcuts: current.shortcuts.filter((item) => item.id !== shortcut.id) });
+            renderList();
+          });
+          row.append(remove);
+        }
+
         list.append(row);
       }
     };

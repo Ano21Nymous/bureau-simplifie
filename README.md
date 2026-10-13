@@ -1,8 +1,8 @@
 # Bureau Simplifié
 
 Un « bureau » d'ordinateur ultra-épuré : de **gros boutons**, de **gros caractères**,
-l'heure, la date, la météo, quelques sites, et c'est tout. Pensé pour être confié
-à une personne peu à l'aise avec l'informatique.
+l'heure, la date, la météo, **quatre grosses tuiles**, et c'est tout. Pensé pour être
+confié à une personne peu à l'aise avec l'informatique.
 
 Construit avec **Tauri 2** (coquille native minuscule + webview du système) et un
 front **TypeScript vanilla** sans framework.
@@ -173,9 +173,9 @@ Options : `--x11`, `--with-apps`, `--quiet-boot`, `--no-sddm`, `--help`.
 Un kiosque sans issue est un kiosque qu'on ne peut plus réparer. Trois sorties
 existent, de la plus douce à la plus brutale :
 
-1. **5 clics rapides sur l'heure** en haut à gauche → l'écran *Réglages*
+1. **5 clics rapides sur l'heure** en haut à gauche → l'écran *Paramètres*
    s'ouvre (c'est volontairement discret).
-2. **« Quitter le bureau »** depuis les *Réglages* → SDDM réaffiche son écran
+2. **« Quitter le bureau »** depuis les *Paramètres* → SDDM réaffiche son écran
    de connexion, d'où l'on peut ouvrir une session normale.
 3. **Si l'écran est figé** : `Ctrl` + `Alt` + `F3` pour passer sur un autre
    terminal virtuel, se connecter, puis :
@@ -217,7 +217,7 @@ sudo rm -f /etc/sddm.conf.d/10-bureau-simplifie.conf \
 ## Le mode kiosque dans l'application
 
 Quand le mode kiosque est actif : plein écran, sans cadre, toujours au premier
-plan, menu contextuel désactivé. Il se règle depuis l'écran *Réglages* — et il
+plan, menu contextuel désactivé. Il se règle depuis l'écran *Paramètres* — et il
 est **imposé** sur une machine dédiée par la variable d'environnement
 `BUREAU_SIMPLIFIE_KIOSK`.
 
@@ -227,9 +227,13 @@ Pour en sortir : **5 clics rapides sur l'heure** en haut à gauche, ou
 ## Personnalisation
 
 - **Ville de la météo**, **taille du texte**, **thème** (clair / sombre / très
-  contrasté), **volume** et **raccourcis** : tout se règle depuis le bouton
-  **Réglages** du bas de l'écran.
-- Les raccourcis par défaut sont définis dans `src/defaults.ts`.
+  contrasté), **volume** et **raccourcis** : tout se règle depuis la tuile
+  **Paramètres**.
+- Les tuiles par défaut (quatre seulement : Internet, Mes mails, Imprimante,
+  Paramètres) sont définies dans `src/defaults.ts`.
+- Les tuiles **Imprimante** et **Paramètres** sont des *actions internes* : on
+  ne peut pas les retirer depuis l'écran de réglages, car le bureau perdrait
+  l'accès aux réglages. Les tuiles d'application, elles, se retirent librement.
 - Les commandes de numérisation / impression sont regroupées dans
   `src/system-commands.ts` (utile selon la distribution : `simple-scan`,
   `xsane`, `skanlite`…).
@@ -250,12 +254,11 @@ Pour en sortir : **5 clics rapides sur l'heure** en haut à gauche, ou
 │  ├─ system-commands.ts       Commandes système (numérisation, impression…)
 │  ├─ style.css                Styles et thèmes
 │  └─ modules/
-│     ├─ launcher.ts           Grille de tuiles + menu du bas
+│     ├─ launcher.ts           Grille des tuiles
 │     ├─ clock.ts              Horloge et date
 │     ├─ weather.ts            Météo Open-Meteo
-│     ├─ actions.ts            Exécution des raccourcis
-│     ├─ browser-panel.ts      Écran « Mes sites »
-│     ├─ settings-panel.ts     Écran « Réglages »
+│     ├─ actions.ts            Exécution des tuiles (applications, sites, actions)
+│     ├─ settings-panel.ts     Écran « Paramètres »
 │     ├─ overlay.ts            Fenêtre modale générique
 │     └─ toast.ts              Messages en bas d'écran
 ├─ src-tauri/                  Coquille native Rust
