@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS } from "./defaults";
-import { isTauri, loadSettings, quitApp, saveSettings, setKiosk, setVolume } from "./ipc";
+import { isTauri, kioskOverride, loadSettings, quitApp, saveSettings, setKiosk, setVolume } from "./ipc";
 import type { Settings } from "./types";
 import { runAction, runShortcut } from "./modules/actions";
 import { openSitePanel } from "./modules/browser-panel";
@@ -143,6 +143,24 @@ function setupShortcuts(): void {
   });
 }
 
+/** Masque le pointeur après quelques secondes d'inactivité : illusion d'un écran dédié. */
+function setupCursorHiding(): void {
+  let timer: number | undefined;
+
+  const show = (): void => {
+    document.documentElement.classList.remove("cursor-hidden");
+    if (timer !== undefined) window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      document.documentElement.classList.add("cursor-hidden");
+    }, 4000);
+  };
+
+  window.addEventListener("mousemove", show, { passive: true });
+  window.addEventListener("mousedown", show, { passive: true });
+  window.addEventListener("touchstart", show, { passive: true });
+  show();
+}
+
 async function init(): Promise<void> {
   const stored = await loadSettings();
   settings = {
@@ -151,12 +169,16 @@ async function init(): Promise<void> {
     shortcuts: stored?.shortcuts ?? DEFAULT_SETTINGS.shortcuts,
   };
 
+  // Sur une machine dédiée, la session force le mode verrouillé.
+  if (await kioskOverride()) settings.kiosk = true;
+
   applyAppearance();
   renderAll();
   renderDock(handleDock);
   startClock();
   setupKioskExit();
   setupShortcuts();
+  setupCursorHiding();
 
   if (settings.kiosk) void setKiosk(true);
   void setVolume(settings.volume);

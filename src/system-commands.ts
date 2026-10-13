@@ -18,9 +18,9 @@ export const SCAN_APPS: CommandSpec[] = [
   { program: "skanlite", args: [] },
 ];
 
-/** Ouverture d'un document existant (pour l'imprimer ensuite). */
+/** Ouverture du dossier Documents (pour y choisir un document à imprimer). */
 export const DOCUMENTS_FOLDER: CommandSpec = {
-  program: "xdg-open",
+  program: "pcmanfm",
   args: ["~/Documents"],
 };
 

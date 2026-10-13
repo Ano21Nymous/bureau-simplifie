@@ -63,6 +63,14 @@ export async function setKiosk(enabled: boolean): Promise<void> {
   }
 }
 
+/** Vrai quand la session impose le mode kiosque (machine dédiée). */
+export async function kioskOverride(): Promise<boolean> {
+  if (isTauri) {
+    return (await invoke("kiosk_override")) as boolean;
+  }
+  return false;
+}
+
 /** Quitte l'application. */
 export async function quitApp(): Promise<void> {
   if (isTauri) {

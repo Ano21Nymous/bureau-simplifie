@@ -565,6 +565,12 @@ input[type="range"] {
   background: #c0392b;
 }
 
+/* Écran dédié : le pointeur disparaît quand on ne s'en sert pas. */
+.cursor-hidden,
+.cursor-hidden * {
+  cursor: none !important;
+}
+
 /* Accessibilité : respect du réglage « animations réduites ». */
 @media (prefers-reduced-motion: reduce) {
   * {

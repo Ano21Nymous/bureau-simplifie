@@ -31,13 +31,32 @@ fn settings_file(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir.join("settings.json"))
 }
 
+/// Développe un « ~/ » initial en dossier personnel.
+///
+/// Aucun shell n'est lancé entre l'application et le système : la
+/// substitution du tilde, que le shell ferait d'ordinaire, doit donc être
+/// faite ici, sinon « ~/Images » désignerait un dossier littéralement
+/// nommé « ~ ».
+fn expand_home(value: &str) -> String {
+    if let Some(rest) = value.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+            return format!("{home}/{rest}");
+        }
+    }
+    value.to_string()
+}
+
+fn expand_args(args: Vec<String>) -> Vec<String> {
+    args.into_iter().map(|arg| expand_home(&arg)).collect()
+}
+
 /// Lance une application du système (navigateur, éditeur, outil de numérisation…).
 #[tauri::command]
 fn launch_app(program: String, args: Vec<String>) -> Result<(), String> {
     if program.trim().is_empty() {
         return Err("Aucun programme indiqué.".to_string());
     }
-    spawn_detached(&program, args)
+    spawn_detached(&program, expand_args(args))
 }
 
 /// Exécute une commande utilitaire du système.
@@ -46,7 +65,7 @@ fn system_run(command: String, args: Vec<String>) -> Result<(), String> {
     if command.trim().is_empty() {
         return Err("Aucune commande indiquée.".to_string());
     }
-    spawn_detached(&command, args)
+    spawn_detached(&command, expand_args(args))
 }
 
 /// Ouvre une adresse web dans le navigateur par défaut.
@@ -108,13 +127,24 @@ fn set_volume(level: u8) -> Result<(), String> {
     }
 }
 
-/// Active ou désactive le mode kiosque : plein écran, sans cadre, au premier plan.
-#[tauri::command]
-fn set_kiosk(window: WebviewWindow, enabled: bool) -> Result<(), String> {
+/// Applique (ou retire) le mode kiosque : plein écran, sans cadre, au premier plan.
+fn apply_kiosk(window: &WebviewWindow, enabled: bool) -> Result<(), String> {
     window.set_fullscreen(enabled).map_err(|error| error.to_string())?;
     window.set_decorations(!enabled).map_err(|error| error.to_string())?;
     window.set_always_on_top(enabled).map_err(|error| error.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+fn set_kiosk(window: WebviewWindow, enabled: bool) -> Result<(), String> {
+    apply_kiosk(&window, enabled)
+}
+
+/// Vrai lorsque le mode kiosque est imposé par la session (variable d'environnement).
+/// Utilisé par la machine qui démarre directement sur le bureau simplifié.
+#[tauri::command]
+fn kiosk_override() -> bool {
+    std::env::var_os("BUREAU_SIMPLIFIE_KIOSK").is_some()
 }
 
 /// Ferme l'application proprement.
@@ -147,12 +177,23 @@ fn save_settings(app: AppHandle, settings: serde_json::Value) -> Result<(), Stri
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            // Si la session démarre en kiosque, on l'applique dès la création de
+            // la fenêtre : aucun cadre ni barre ne doit apparaître, même furtivement.
+            if std::env::var_os("BUREAU_SIMPLIFIE_KIOSK").is_some() {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = apply_kiosk(&window, true);
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             launch_app,
             system_run,
             open_url,
             set_volume,
             set_kiosk,
+            kiosk_override,
             quit_app,
             load_settings,
             save_settings
