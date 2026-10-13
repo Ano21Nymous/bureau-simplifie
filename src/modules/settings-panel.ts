@@ -1,5 +1,5 @@
-import { setKiosk, setVolume } from "../ipc";
-import type { Settings, Shortcut, ShortcutKind, ThemeName } from "../types";
+import { readBrightness, setBrightness, setVolume } from "../ipc";
+import type { Settings } from "../types";
 import { openOverlay } from "./overlay";
 import { toast } from "./toast";
 
@@ -7,16 +7,9 @@ export interface SettingsPanelContext {
   settings: Settings;
   onChange: (next: Settings) => void;
   onRefreshWeather: () => void;
-  onQuit: () => void;
 }
 
-const THEMES: Array<{ id: ThemeName; label: string }> = [
-  { id: "clair", label: "Clair" },
-  { id: "sombre", label: "Sombre" },
-  { id: "contraste", label: "Très contrasté" },
-];
-
-/** Crée un champ étiqueté (clic sur le texte = focus sur le contrôle). */
+/** Champ étiqueté (clic sur le texte = focus sur le contrôle). */
 function field(labelText: string, control: HTMLElement): HTMLLabelElement {
   const label = document.createElement("label");
   label.className = "field";
@@ -27,22 +20,47 @@ function field(labelText: string, control: HTMLElement): HTMLLabelElement {
   return label;
 }
 
-function section(title: string): HTMLElement {
-  const element = document.createElement("section");
-  element.className = "settings__section";
-  const heading = document.createElement("h3");
-  heading.className = "settings__heading";
-  heading.textContent = title;
-  element.append(heading);
-  return element;
+interface SliderParts {
+  control: HTMLInputElement;
+  value: HTMLSpanElement;
 }
 
-function textInput(placeholder: string): HTMLInputElement {
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "text-input";
-  input.placeholder = placeholder;
-  return input;
+/** Curseur de 0 à 100 accompagné de sa valeur en pourcentage. */
+function slider(initial: number, onValue: (value: number) => void): SliderParts {
+  const value = document.createElement("span");
+  value.className = "field__value";
+  value.textContent = `${initial} %`;
+
+  const control = document.createElement("input");
+  control.type = "range";
+  control.min = "0";
+  control.max = "100";
+  control.step = "1";
+  control.value = String(initial);
+  control.addEventListener("input", () => {
+    const next = Number(control.value);
+    value.textContent = `${next} %`;
+    onValue(next);
+  });
+
+  return { control, value };
+}
+
+/** Place un curseur et sa valeur sur une même ligne. */
+function sliderRow(parts: SliderParts): HTMLDivElement {
+  const row = document.createElement("div");
+  row.className = "slider-row";
+  row.append(parts.control, parts.value);
+  return row;
+}
+
+/** Évite de marteler le système pendant que le doigt glisse. */
+function debounced(action: (value: number) => void, delay: number): (value: number) => void {
+  let timer: number | undefined;
+  return (value) => {
+    if (timer !== undefined) window.clearTimeout(timer);
+    timer = window.setTimeout(() => action(value), delay);
+  };
 }
 
 export function openSettingsPanel(context: SettingsPanelContext): void {
@@ -55,83 +73,41 @@ export function openSettingsPanel(context: SettingsPanelContext): void {
   };
 
   openOverlay("Paramètres", (body) => {
-    // ------------------------- Confort de lecture -------------------------
-    const display = section("Confort de lecture");
-
-    const fontValue = document.createElement("span");
-    fontValue.className = "field__value";
-    fontValue.textContent = `${Math.round(current.fontScale * 100)} %`;
-
-    const font = document.createElement("input");
-    font.type = "range";
-    font.min = "1";
-    font.max = "2";
-    font.step = "0.05";
-    font.value = String(current.fontScale);
-    font.addEventListener("input", () => {
-      const value = Number(font.value);
-      fontValue.textContent = `${Math.round(value * 100)} %`;
-      update({ fontScale: value });
-    });
-
-    const fontField = field("Taille du texte", font);
-    fontField.append(fontValue);
-    display.append(fontField);
-
-    const themeButtons = document.createElement("div");
-    themeButtons.className = "theme-choice";
-    const themeEls = new Map<ThemeName, HTMLButtonElement>();
-    for (const theme of THEMES) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "theme-choice__button";
-      button.textContent = theme.label;
-      button.classList.toggle("is-active", current.theme === theme.id);
-      button.addEventListener("click", () => {
-        update({ theme: theme.id });
-        for (const [id, element] of themeEls) {
-          element.classList.toggle("is-active", id === theme.id);
-        }
+    // ------------------------------ Luminosité -----------------------------
+    const applyBrightness = debounced((value) => {
+      void setBrightness(value).catch((error: unknown) => {
+        console.error("Luminosité non appliquée", error);
       });
-      themeEls.set(theme.id, button);
-      themeButtons.append(button);
-    }
-    display.append(field("Couleurs", themeButtons));
-    body.append(display);
+    }, 120);
 
-    // --------------------------------- Son --------------------------------
-    const sound = section("Son");
+    const brightness = slider(100, applyBrightness);
+    const brightnessField = field("Luminosité", sliderRow(brightness));
+    body.append(brightnessField);
 
-    const volumeValue = document.createElement("span");
-    volumeValue.className = "field__value";
-    volumeValue.textContent = `${current.volume} %`;
-
-    const volume = document.createElement("input");
-    volume.type = "range";
-    volume.min = "0";
-    volume.max = "100";
-    volume.step = "1";
-    volume.value = String(current.volume);
-    let volumeTimer: number | undefined;
-    volume.addEventListener("input", () => {
-      const value = Number(volume.value);
-      volumeValue.textContent = `${value} %`;
-      update({ volume: value });
-      if (volumeTimer !== undefined) window.clearTimeout(volumeTimer);
-      volumeTimer = window.setTimeout(() => {
-        void setVolume(value);
-      }, 120);
+    // Un écran externe n'a pas toujours de rétroéclairage réglable : dans ce
+    // cas, la ligne disparaît plutôt que de proposer un curseur inopérant.
+    void readBrightness().then((level) => {
+      if (level === null) {
+        brightnessField.hidden = true;
+        return;
+      }
+      brightness.control.value = String(level);
+      brightness.value.textContent = `${level} %`;
     });
 
-    const volumeField = field("Volume", volume);
-    volumeField.append(volumeValue);
-    sound.append(volumeField);
-    body.append(sound);
+    // ---------------------------------- Son --------------------------------
+    const applyVolume = debounced((value) => void setVolume(value), 120);
+    const volume = slider(current.volume, (value) => {
+      update({ volume: value });
+      applyVolume(value);
+    });
+    body.append(field("Son", sliderRow(volume)));
 
-    // -------------------------------- Météo -------------------------------
-    const weather = section("Météo");
-
-    const cityInput = textInput("Ex. Lyon");
+    // --------------------------------- Ville -------------------------------
+    const cityInput = document.createElement("input");
+    cityInput.type = "text";
+    cityInput.className = "text-input";
+    cityInput.placeholder = "Ex. Lyon";
     cityInput.value = current.city;
     cityInput.setAttribute("aria-label", "Ville pour la météo");
 
@@ -151,171 +127,8 @@ export function openSettingsPanel(context: SettingsPanelContext): void {
     });
 
     const cityRow = document.createElement("div");
-    cityRow.className = "inline";
+    cityRow.className = "slider-row";
     cityRow.append(cityInput, citySave);
-    weather.append(field("Ville", cityRow));
-    body.append(weather);
-
-    // ----------------------------- Verrouillage ---------------------------
-    const kiosk = section("Verrouillage");
-
-    const kioskToggle = document.createElement("input");
-    kioskToggle.type = "checkbox";
-    kioskToggle.className = "checkbox";
-    kioskToggle.checked = current.kiosk;
-    kioskToggle.addEventListener("change", () => {
-      const enabled = kioskToggle.checked;
-      update({ kiosk: enabled });
-      void setKiosk(enabled);
-      if (enabled) {
-        toast("Mode verrouillé activé. Cliquez 5 fois sur l'heure pour en sortir.");
-      }
-    });
-    kiosk.append(field("Mode kiosque (plein écran verrouillé)", kioskToggle));
-
-    const kioskHint = document.createElement("p");
-    kioskHint.className = "hint";
-    kioskHint.textContent =
-      "Pour sortir du mode verrouillé : cliquez 5 fois rapidement sur l'heure, en haut à gauche.";
-    kiosk.append(kioskHint);
-    body.append(kiosk);
-
-    // ------------------------------ Raccourcis ----------------------------
-    const shortcuts = section("Mes raccourcis");
-
-    const list = document.createElement("div");
-    list.className = "shortcut-list";
-
-    const renderList = (): void => {
-      list.replaceChildren();
-      for (const shortcut of current.shortcuts) {
-        const row = document.createElement("div");
-        row.className = "shortcut-row";
-
-        const emoji = document.createElement("span");
-        emoji.className = "shortcut-row__emoji";
-        emoji.textContent = shortcut.emoji;
-
-        const info = document.createElement("span");
-        info.className = "shortcut-row__info";
-        const kindLabel =
-          shortcut.kind === "app" ? "application" : shortcut.kind === "url" ? "site" : "action";
-        info.textContent = `${shortcut.label} (${kindLabel}) — ${shortcut.target}`;
-
-        row.append(emoji, info);
-
-        // Les actions internes (« Paramètres », « Imprimante »…) sont
-        // indispensables au bureau : on ne peut pas les retirer, sans quoi on
-        // se retrouverait sans accès aux réglages ni au bouton « Quitter ».
-        if (shortcut.kind === "action") {
-          const fixed = document.createElement("span");
-          fixed.className = "shortcut-row__fixed";
-          fixed.textContent = "Toujours présent";
-          row.append(fixed);
-        } else {
-          const remove = document.createElement("button");
-          remove.type = "button";
-          remove.className = "shortcut-row__remove";
-          remove.textContent = "Retirer";
-          remove.addEventListener("click", () => {
-            update({ shortcuts: current.shortcuts.filter((item) => item.id !== shortcut.id) });
-            renderList();
-          });
-          row.append(remove);
-        }
-
-        list.append(row);
-      }
-    };
-    renderList();
-    shortcuts.append(list);
-
-    const addLabel = textInput("Nom (ex. Mes photos)");
-    const kindSelect = document.createElement("select");
-    kindSelect.className = "text-input";
-    const kindOptions: Array<[ShortcutKind, string]> = [
-      ["app", "Application"],
-      ["url", "Site internet"],
-      ["action", "Action interne"],
-    ];
-    for (const [value, text] of kindOptions) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = text;
-      kindSelect.append(option);
-    }
-    const addTarget = textInput("Commande ou adresse (ex. firefox, https://…)");
-    const addArgs = textInput("Arguments, séparés par des espaces (optionnel)");
-
-    const emojiInput = document.createElement("input");
-    emojiInput.type = "text";
-    emojiInput.className = "text-input text-input--short";
-    emojiInput.value = "⭐";
-    emojiInput.maxLength = 4;
-    emojiInput.setAttribute("aria-label", "Émoji de la tuile");
-
-    const colorInput = document.createElement("input");
-    colorInput.type = "color";
-    colorInput.className = "color-input";
-    colorInput.value = "#2f6fed";
-    colorInput.setAttribute("aria-label", "Couleur de la tuile");
-
-    const emojiColorRow = document.createElement("div");
-    emojiColorRow.className = "inline";
-    emojiColorRow.append(emojiInput, colorInput);
-
-    const addButton = document.createElement("button");
-    addButton.type = "button";
-    addButton.className = "button";
-    addButton.textContent = "Ajouter la tuile";
-    addButton.addEventListener("click", () => {
-      const label = addLabel.value.trim();
-      const target = addTarget.value.trim();
-      if (!label || !target) {
-        toast("Indiquez au moins un nom et une commande ou une adresse.");
-        return;
-      }
-      const args = addArgs.value.trim() ? addArgs.value.trim().split(/\s+/) : [];
-      const shortcut: Shortcut = {
-        id: crypto.randomUUID(),
-        label,
-        kind: kindSelect.value as ShortcutKind,
-        target,
-        args,
-        emoji: emojiInput.value.trim() || "⭐",
-        color: colorInput.value,
-      };
-      update({ shortcuts: [...current.shortcuts, shortcut] });
-      renderList();
-      addLabel.value = "";
-      addTarget.value = "";
-      addArgs.value = "";
-      toast(`« ${label} » a été ajouté au bureau.`);
-    });
-
-    shortcuts.append(
-      addLabel,
-      kindSelect,
-      addTarget,
-      addArgs,
-      field("Émoji et couleur", emojiColorRow),
-      addButton,
-    );
-    body.append(shortcuts);
-
-    // --------------------------------- Sortie -----------------------------
-    const footer = document.createElement("div");
-    footer.className = "settings__footer";
-
-    const quit = document.createElement("button");
-    quit.type = "button";
-    quit.className = "button button--danger";
-    quit.textContent = "Quitter le bureau";
-    quit.addEventListener("click", () => {
-      if (window.confirm("Fermer le bureau simplifié ?")) context.onQuit();
-    });
-
-    footer.append(quit);
-    body.append(footer);
+    body.append(field("Ville (météo)", cityRow));
   });
 }

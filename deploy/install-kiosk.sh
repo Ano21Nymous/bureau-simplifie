@@ -140,7 +140,10 @@ fi
 # --------------------------------------------------------------------------- #
 #  Dépendances système
 # --------------------------------------------------------------------------- #
-PACKAGES="fonts-noto-color-emoji xdg-utils"
+# `brightnessctl` permet à la tuile « Paramètres » de régler la luminosité ;
+# son paquet udev autorise le groupe `video` à écrire dans /sys/class/backlight.
+# `fonts-noto-color-emoji` reste utile pour les tuiles ajoutées avec un émoji.
+PACKAGES="brightnessctl fonts-noto-color-emoji xdg-utils"
 
 if [ "$MODE" = "wayland" ]; then
   PACKAGES="$PACKAGES cage"
@@ -166,9 +169,12 @@ log "Installation des paquets : $PACKAGES"
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $PACKAGES
 ok "dépendances en place"
 
-# cage a besoin d'accéder aux périphériques graphiques et d'entrée.
+# cage a besoin d'accéder aux périphériques graphiques et d'entrée. Le groupe
+# « video » est requis dans tous les cas pour régler la luminosité (brightnessctl).
 if [ "$MODE" = "wayland" ]; then
   usermod -aG video,render "$KIOSK_USER" 2>/dev/null || true
+else
+  usermod -aG video "$KIOSK_USER" 2>/dev/null || true
 fi
 
 # La police d'émojis est indispensable : les tuiles s'affichent sinon en

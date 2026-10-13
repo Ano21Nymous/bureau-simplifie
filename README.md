@@ -11,10 +11,10 @@ front **TypeScript vanilla** sans framework.
 
 | Choix | Effet |
 | --- | --- |
-| Aucun framework front (pas de React/Vue) | bundle JS final ≈ **17 ko** |
+| Aucun framework front (pas de React/Vue) | bundle JS final ≈ **37 ko** |
 | Aucun greffon Tauri externe | surface de code native minimale |
 | `tauri` seul + `serde_json` | très peu de dépendances Rust |
-| Icônes en émoji | zéro image, zéro requête réseau |
+| Icônes SVG locales, intégrées au bundle | zéro requête réseau, chargement instantané |
 | Météo via Open-Meteo | pas de clé d'API, pas de compte, pas de tracking |
 | `opt-level = "s"`, LTO, `strip`, `panic = "abort"` | binaire final le plus petit possible |
 | Webview fournie par l'OS (WebKitGTK sous Linux) | pas de Chromium embarqué (≠ Electron) |
@@ -149,7 +149,8 @@ Ce que fait le script :
 | Applications | `--with-apps` installe le navigateur, les mails, les photos, la musique, la calculatrice, le gestionnaire de fichiers et la numérisation, en accord avec les tuiles par défaut. |
 | Session kiosque | `cage`, compositeur Wayland qui n'affiche **qu'une seule** application, toujours plein écran — ou `matchbox` en X11 (repli matériel, option `--x11`). |
 | Connexion automatique | SDDM ouvre directement la session « Bureau Simplifié », sans écran de connexion. |
-| Polices | `fonts-noto-color-emoji` : sans elle, les icônes des tuiles seraient de petits carrés vides. |
+| Luminosité | `brightnessctl` : permet à la tuile *Paramètres* de régler le rétroéclairage, et ajoute l'utilisateur au groupe `video`. |
+| Polices | `fonts-noto-color-emoji` : utile pour les tuiles ajoutées avec un émoji (les tuiles par défaut, elles, utilisent des icônes SVG). |
 | Démarrage silencieux | `--quiet-boot` masque GRUB et affiche un écran de démarrage à la place du défilé de messages. |
 | Veille | La mise en veille automatique est désactivée : le bureau reste toujours visible. |
 
@@ -174,9 +175,11 @@ Un kiosque sans issue est un kiosque qu'on ne peut plus réparer. Trois sorties
 existent, de la plus douce à la plus brutale :
 
 1. **5 clics rapides sur l'heure** en haut à gauche → l'écran *Paramètres*
-   s'ouvre (c'est volontairement discret).
-2. **« Quitter le bureau »** depuis les *Paramètres* → SDDM réaffiche son écran
-   de connexion, d'où l'on peut ouvrir une session normale.
+   s'ouvre (c'est volontairement discret). Le mode verrouillé y est alors
+   **désactivé**, ce qui rétablit le cadre de fenêtre et le menu contextuel.
+2. **`Ctrl` + `Maj` + `Q`** → une confirmation apparaît ; en acceptant,
+   l'application se ferme et SDDM réaffiche son écran de connexion, d'où l'on
+   peut ouvrir une session normale.
 3. **Si l'écran est figé** : `Ctrl` + `Alt` + `F3` pour passer sur un autre
    terminal virtuel, se connecter, puis :
 
@@ -200,8 +203,9 @@ Redémarrez, puis :
 
 `deploy/bureau-simplifie.service` démarre le kiosque **sans aucun gestionnaire
 de connexion** : c'est la méthode la plus indétectable, mais elle supprime la
-porte de secours n°2. À réserver au moment où tout fonctionne déjà ; les
-instructions sont en commentaire en tête du fichier.
+porte de secours n°2 (plus d'écran de connexion ni de session de bureau où
+revenir). À réserver au moment où tout fonctionne déjà ; les instructions sont
+en commentaire en tête du fichier.
 
 ### Désinstaller le kiosque
 
@@ -217,29 +221,50 @@ sudo rm -f /etc/sddm.conf.d/10-bureau-simplifie.conf \
 ## Le mode kiosque dans l'application
 
 Quand le mode kiosque est actif : plein écran, sans cadre, toujours au premier
-plan, menu contextuel désactivé. Il se règle depuis l'écran *Paramètres* — et il
-est **imposé** sur une machine dédiée par la variable d'environnement
-`BUREAU_SIMPLIFIE_KIOSK`.
+plan, menu contextuel désactivé. Il est **imposé** sur une machine dédiée par la
+variable d'environnement `BUREAU_SIMPLIFIE_KIOSK` et n'est plus réglable depuis
+*Paramètres* (pour éviter qu'on le désactive par erreur) : il se désactive
+automatiquement dès qu'on emprunte une porte de secours.
 
 Pour en sortir : **5 clics rapides sur l'heure** en haut à gauche, ou
 `Ctrl` + `Maj` + `Q` pour quitter complètement.
 
 ## Personnalisation
 
-- **Ville de la météo**, **taille du texte**, **thème** (clair / sombre / très
-  contrasté), **volume** et **raccourcis** : tout se règle depuis la tuile
-  **Paramètres**.
-- Les tuiles par défaut (quatre seulement : Internet, Mes mails, Imprimante,
-  Paramètres) sont définies dans `src/defaults.ts`.
-- Les tuiles **Imprimante** et **Paramètres** sont des *actions internes* : on
-  ne peut pas les retirer depuis l'écran de réglages, car le bureau perdrait
-  l'accès aux réglages. Les tuiles d'application, elles, se retirent librement.
+L'écran **Paramètres** (tuile du même nom) se veut volontairement minimal. Il ne
+contient que trois réglages, ceux dont on se sert vraiment :
+
+- **Luminosité** de l'écran (via `brightnessctl`) — la ligne est masquée
+  automatiquement si l'écran n'a pas de rétroéclairage réglable (moniteur
+  externe). L'utilisateur doit appartenir au groupe `video` (l'installateur s'en
+  charge).
+- **Volume** sonore.
+- **Ville** utilisée pour la météo.
+
+Le reste (taille du texte, thème, verrouillage, édition des tuiles) n'est plus
+exposé dans l'interface. Les tuiles par défaut — quatre seulement : Internet, Mes
+mails, Imprimante, Paramètres — sont définies dans `src/defaults.ts` ; pour les
+modifier, on édite ce fichier (ou `~/.config/fr.bureau.simplifie/settings.json`).
+
 - Les commandes de numérisation / impression sont regroupées dans
   `src/system-commands.ts` (utile selon la distribution : `simple-scan`,
   `xsane`, `skanlite`…).
 - Les réglages de l'utilisateur sont enregistrés dans
   `~/.config/fr.bureau.simplifie/settings.json`. En cas de problème, supprimer
   ce fichier restaure les valeurs par défaut.
+
+## Direction artistique : elementary OS
+
+L'interface reprend la **palette et les codes visuels d'[elementary OS](https://elementary.io)** :
+cartes blanches à coins arrondis, ombres douces, accent **Blueberry** `#3689e6`,
+typographie légère pour l'heure.
+
+Les icônes des tuiles et de la météo proviennent des projets
+[`elementary/icons`](https://github.com/elementary/icons) et
+[`elementary/mail`](https://github.com/elementary/mail) (voir
+`src/assets/icons/NOTICE.md`). Attention : elles sont sous licence
+**GPL-3.0-or-later**, une licence *copyleft* — à prendre en compte si
+l'application est un jour distribuée publiquement.
 
 ## Structure du projet
 
@@ -249,10 +274,12 @@ Pour en sortir : **5 clics rapides sur l'heure** en haut à gauche, ou
 ├─ src/
 │  ├─ main.ts                  Point d'entrée : état, horloge, météo, rendu
 │  ├─ ipc.ts                   Pont vers le natif (+ repli navigateur)
+│  ├─ icons.ts                 Icônes elementary des tuiles et de la météo
 │  ├─ types.ts                 Types partagés
 │  ├─ defaults.ts              Raccourcis et réglages par défaut
 │  ├─ system-commands.ts       Commandes système (numérisation, impression…)
-│  ├─ style.css                Styles et thèmes
+│  ├─ style.css                Styles (palette elementary OS)
+│  ├─ assets/icons/            Icônes SVG (voir NOTICE.md pour la licence)
 │  └─ modules/
 │     ├─ launcher.ts           Grille des tuiles
 │     ├─ clock.ts              Horloge et date

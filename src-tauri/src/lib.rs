@@ -127,6 +127,68 @@ fn set_volume(level: u8) -> Result<(), String> {
     }
 }
 
+/// Règle la luminosité de l'écran de 0 à 100, via `brightnessctl`.
+///
+/// Le paquet `brightnessctl` fournit une règle udev qui autorise les membres du
+/// groupe `video` à écrire dans `/sys/class/backlight` : aucun droit root n'est
+/// nécessaire pour l'application.
+#[tauri::command]
+fn set_brightness(level: u8) -> Result<(), String> {
+    let level = level.min(100);
+
+    #[cfg(target_os = "linux")]
+    {
+        let percent = format!("{level}%");
+        let ok = Command::new("brightnessctl")
+            .args(["set", percent.as_str()])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+
+        if ok {
+            return Ok(());
+        }
+        return Err("Luminosité non réglable (installez « brightnessctl »).".to_string());
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = level;
+        Ok(())
+    }
+}
+
+/// Lit la luminosité actuelle (0 à 100).
+/// Renvoie `None` lorsque l'écran n'a pas de rétroéclairage réglable.
+#[tauri::command]
+fn read_brightness() -> Option<u8> {
+    #[cfg(target_os = "linux")]
+    {
+        fn capture(arg: &str) -> Option<String> {
+            let output = Command::new("brightnessctl").arg(arg).output().ok()?;
+            if !output.status.success() {
+                return None;
+            }
+            Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        }
+
+        let max: u32 = capture("max")?.parse().ok()?;
+        let current: u32 = capture("get")?.parse().ok()?;
+        if max == 0 {
+            return None;
+        }
+        return Some(((current * 100) / max) as u8);
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        None
+    }
+}
+
 /// Applique (ou retire) le mode kiosque : plein écran, sans cadre, au premier plan.
 fn apply_kiosk(window: &WebviewWindow, enabled: bool) -> Result<(), String> {
     window.set_fullscreen(enabled).map_err(|error| error.to_string())?;
@@ -192,6 +254,8 @@ pub fn run() {
             system_run,
             open_url,
             set_volume,
+            set_brightness,
+            read_brightness,
             set_kiosk,
             kiosk_override,
             quit_app,

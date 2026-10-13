@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS } from "./defaults";
+import { WEATHER_ICONS } from "./icons";
 import { isTauri, kioskOverride, loadSettings, quitApp, saveSettings, setKiosk, setVolume } from "./ipc";
 import type { Settings, Shortcut } from "./types";
 import { runShortcut } from "./modules/actions";
@@ -65,10 +66,21 @@ function openSettings(): void {
     onRefreshWeather: () => {
       void refreshWeather();
     },
-    onQuit: () => {
-      void quitApp();
-    },
   });
+}
+
+/** Affiche (ou masque) l'icône météo du bandeau supérieur. */
+function setWeatherIcon(state: string | null): void {
+  const icon = document.getElementById("weather-icon");
+  if (!(icon instanceof HTMLImageElement)) return;
+
+  const src = state ? WEATHER_ICONS[state] : undefined;
+  if (!src) {
+    icon.hidden = true;
+    return;
+  }
+  icon.src = src;
+  icon.hidden = false;
 }
 
 async function refreshWeather(): Promise<void> {
@@ -82,7 +94,7 @@ async function refreshWeather(): Promise<void> {
       weatherAbort.signal,
     );
 
-    setText("weather-icon", result.emoji);
+    setWeatherIcon(result.state);
     setText("weather-temp", `${result.temperature}°`);
     setText("weather-place", `${result.place} · ${result.label}`);
 
@@ -92,7 +104,7 @@ async function refreshWeather(): Promise<void> {
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") return;
-    setText("weather-icon", "🌡️");
+    setWeatherIcon(null);
     setText("weather-temp", "--°");
     setText("weather-place", "Météo indisponible");
   }

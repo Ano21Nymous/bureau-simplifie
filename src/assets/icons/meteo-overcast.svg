@@ -1,0 +1,28 @@
+<svg
+        xmlns='http://www.w3.org/2000/svg'
+        xmlns:svg='http://www.w3.org/2000/svg'
+        id='svg8'
+        width='16'
+        height='16'>
+  <path
+          id='path859-6-0-2'
+          opacity='1'
+          fill='url(#gpa:foreground) #555761'
+          fill-opacity='1'
+          fill-rule='nonzero'
+          stroke='none'
+          stroke-opacity='1'
+          stroke-width='1'
+          stroke-linecap='butt'
+          stroke-linejoin='miter'
+          stroke-miterlimit='4'
+          stroke-dasharray='none'
+          stroke-dashoffset='0'
+          marker-start='none'
+          marker-mid='none'
+          marker-end='none'
+          paint-order='normal'
+          d='M 6 3 A 2.5 2.5 0 0 0 3.5 5.5 A 2.5 2.5 0 0 0 3.56445 6.04883 A 2 2 0 0 0 2 8 A 2 2 0 0 0 3.29883 9.87109 C 3.57248 9.36448, 4.00842 8.93419, 4.51172 8.60742 C 4.51051 8.57334, 4.50021 8.53996, 4.5 8.50586 A 1.0001 1.0001 0 0 1 4.5 8.5 C 4.5 7.5837, 4.87747 6.67331, 5.52539 6.02539 C 6.17331 5.37747, 7.0837 5, 8 5 A 1.0001 1.0001 0 0 0 8.00195 5 C 8.94363 5.00123, 9.78665 5.49612, 10.4414 6.16992 C 10.5043 6.15472, 10.5633 6.12821, 10.623 6.10352 A 2 2 0 0 0 10.3984 6.04297 A 1.5 1.5 0 0 0 10.5 5.5 A 1.5 1.5 0 0 0 9 4 A 1.5 1.5 0 0 0 8.16406 4.25391 A 2.5 2.5 0 0 0 6 3 Z M 8 6 A 2.5 2.5 0 0 0 5.5 8.5 A 2.5 2.5 0 0 0 5.56445 9.04883 A 2 2 0 0 0 4 11 A 2 2 0 0 0 6 13 L 12 13 A 2 2 0 0 0 14 11 A 2 2 0 0 0 12.3984 9.04297 A 1.5 1.5 0 0 0 12.5 8.5 A 1.5 1.5 0 0 0 11 7 A 1.5 1.5 0 0 0 10.1641 7.25391 A 2.5 2.5 0 0 0 8 6 Z'
+          class="foreground">
+  </path>
+</svg>

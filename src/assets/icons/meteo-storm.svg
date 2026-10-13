@@ -1,0 +1,48 @@
+<svg
+        xmlns='http://www.w3.org/2000/svg'
+        xmlns:svg='http://www.w3.org/2000/svg'
+        id='svg8'
+        width='16'
+        height='16'>
+  <path
+          id='path859-9-2-5-4-1-7'
+          opacity='1'
+          fill='url(#gpa:foreground) #555761'
+          fill-opacity='1'
+          fill-rule='nonzero'
+          stroke='none'
+          stroke-opacity='1'
+          stroke-width='1'
+          stroke-linecap='butt'
+          stroke-linejoin='miter'
+          stroke-miterlimit='4'
+          stroke-dasharray='none'
+          stroke-dashoffset='0'
+          marker-start='none'
+          marker-mid='none'
+          marker-end='none'
+          paint-order='normal'
+          d='M 9 3 A 2.5 2.5 0 0 0 6.83594 4.25391 A 1.5 1.5 0 0 0 6 4 A 1.5 1.5 0 0 0 4.5 5.5 A 1.5 1.5 0 0 0 4.60156 6.04297 A 2 2 0 0 0 3 8 A 2 2 0 0 0 5 10 L 5.73633 10 L 6.00781 7.87305 A 1.00105 1.00105 0 0 1 7 7 L 9.5 7 A 1.00105 1.00105 0 0 1 10.4707 8.24219 L 10.2812 8.99609 L 10.498 8.99609 A 1.00105 1.00105 0 0 1 11.498 9.93359 A 2 2 0 0 0 13 8 A 2 2 0 0 0 11.4355 6.04883 A 2.5 2.5 0 0 0 11.5 5.5 A 2.5 2.5 0 0 0 9 3 Z'
+          class="foreground">
+  </path>
+  <path
+          id='path1995'
+          opacity='1'
+          fill='url(#gpa:warning) #f9c440'
+          fill-opacity='1'
+          fill-rule='nonzero'
+          stroke='none'
+          stroke-opacity='1'
+          stroke-width='1'
+          stroke-linecap='butt'
+          stroke-linejoin='miter'
+          stroke-miterlimit='4'
+          stroke-dasharray='none'
+          stroke-dashoffset='0'
+          marker-start='none'
+          marker-mid='none'
+          marker-end='none'
+          d='M 9.5 8 L 7 8 L 6.5 12 L 8 12 L 7.5 15 L 10.5 10 L 9 10 Z'
+          class="warning">
+  </path>
+</svg>

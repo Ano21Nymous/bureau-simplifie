@@ -50,6 +50,27 @@ export async function setVolume(level: number): Promise<void> {
   console.info("[setVolume hors Tauri]", level);
 }
 
+/** Règle la luminosité de l'écran (0-100). */
+export async function setBrightness(level: number): Promise<void> {
+  if (isTauri) {
+    await invoke("set_brightness", { level: Math.round(level) });
+    return;
+  }
+  console.info("[setBrightness hors Tauri]", level);
+}
+
+/**
+ * Lit la luminosité actuelle (0-100).
+ * Renvoie `null` quand l'écran n'a pas de rétroéclairage réglable
+ * (moniteur externe, par exemple) : le curseur est alors masqué.
+ */
+export async function readBrightness(): Promise<number | null> {
+  if (isTauri) {
+    return (await invoke("read_brightness")) as number | null;
+  }
+  return 80; // valeur fictive, pour mettre au point l'interface au navigateur
+}
+
 /** Active/désactive le mode kiosque (plein écran verrouillé). */
 export async function setKiosk(enabled: boolean): Promise<void> {
   if (isTauri) {
