@@ -40,9 +40,13 @@
   --radius: 0.85rem;
   --radius-lg: 1rem;
 
-  /* --- Boutons (style elementary OS) --------------------------------- */
-  /* Dégradé vertical clair, fin liseré et reflet intérieur : le bouton
-     « classique » d'elementary. Chaque thème redéfinit ces valeurs. */
+  /* --- Contrôles (boutons et champs), style elementary OS ------------ */
+  /* Boutons et champs partagent la même forme : même rayon, même liseré.
+     Dégradé vertical clair et reflet intérieur pour les boutons ; fond uni
+     et léger creux pour les champs. Chaque thème redéfinit ces valeurs. */
+  --control-radius: 0.3rem;
+  --focus-ring: rgba(54, 137, 230, 0.3);
+
   --button-top: #ffffff;
   --button-bottom: #e6e6e6;
   --button-bottom-hover: #d4d4d4;
@@ -50,7 +54,13 @@
   --button-border-hover: #888888;
   --button-text: #333333;
   --button-inset: rgba(255, 255, 255, 0.6);
-  --button-radius: 0.3rem;
+
+  --field-bg: #ffffff;
+  --field-border: #adadad;
+  --field-border-hover: #888888;
+  --field-text: #333333;
+  --field-placeholder: #9d9d9d;
+  --field-inset: rgba(0, 0, 0, 0.06);
 }
 
 [data-theme="sombre"] {
@@ -70,6 +80,13 @@
   --button-border-hover: #6e6e6e;
   --button-text: #fafafa;
   --button-inset: rgba(255, 255, 255, 0.07);
+
+  --field-bg: #2f2f2f;
+  --field-border: #555555;
+  --field-border-hover: #6e6e6e;
+  --field-text: #fafafa;
+  --field-placeholder: #8a8a8a;
+  --field-inset: rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="contraste"] {
@@ -90,6 +107,13 @@
   --button-border-hover: #ffe259;
   --button-text: #ffffff;
   --button-inset: transparent;
+
+  --field-bg: #000000;
+  --field-border: #ffffff;
+  --field-border-hover: #ffe259;
+  --field-text: #ffffff;
+  --field-placeholder: #c9c9c9;
+  --field-inset: transparent;
 }
 
 html {
@@ -301,7 +325,7 @@ body {
   background-color: var(--button-bottom);
   background-image: linear-gradient(to bottom, var(--button-top) 0%, var(--button-bottom) 100%);
   border: 1px solid var(--button-border);
-  border-radius: var(--button-radius);
+  border-radius: var(--control-radius);
   box-shadow: inset 0 1px 0 var(--button-inset);
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -320,7 +344,7 @@ body {
 .panel__close:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(54, 137, 230, 0.3), inset 0 1px 0 var(--button-inset);
+  box-shadow: 0 0 0 3px var(--focus-ring), inset 0 1px 0 var(--button-inset);
 }
 
 .panel__body {
@@ -380,18 +404,28 @@ input[type="range"] {
 .text-input {
   flex: 1;
   font: inherit;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   padding: 0.7rem 0.9rem;
-  color: var(--text);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 0.6rem;
+  color: var(--field-text);
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  border-radius: var(--control-radius);
+  box-shadow: inset 0 1px 2px var(--field-inset);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.text-input::placeholder {
+  color: var(--field-placeholder);
+}
+
+.text-input:hover {
+  border-color: var(--field-border-hover);
 }
 
 .text-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(54, 137, 230, 0.25);
+  box-shadow: inset 0 1px 2px var(--field-inset), 0 0 0 3px var(--focus-ring);
 }
 
 /* Boutons : style elementary OS — dégradé vertical clair, fin liseré et
@@ -405,7 +439,7 @@ input[type="range"] {
   background-color: var(--button-bottom);
   background-image: linear-gradient(to bottom, var(--button-top) 0%, var(--button-bottom) 100%);
   border: 1px solid var(--button-border);
-  border-radius: var(--button-radius);
+  border-radius: var(--control-radius);
   box-shadow: inset 0 1px 0 var(--button-inset);
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -424,7 +458,7 @@ input[type="range"] {
 .button:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(54, 137, 230, 0.3), inset 0 1px 0 var(--button-inset);
+  box-shadow: 0 0 0 3px var(--focus-ring), inset 0 1px 0 var(--button-inset);
 }
 
 .button:disabled {
