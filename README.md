@@ -89,7 +89,7 @@ git init
 git add -A
 git commit -m "Bureau simplifié : première version"
 git branch -M main
-git remote add origin https://github.com/<vous>/bureau-simplifie.git
+git remote add origin https://github.com/Ano21Nymous/bureau-simplifie.git
 git push -u origin main
 ```
 
@@ -275,7 +275,7 @@ journalctl -u bureau-simplifie-maj     # voir ce qui s'est passé au démarrage
 Tout tient dans **`/etc/bureau-simplifie/maj.conf`** :
 
 ```sh
-DEPOT="vous/bureau-simplifie"   # dépôt GitHub (propriétaire/nom)
+DEPOT="Ano21Nymous/bureau-simplifie"   # dépôt GitHub (propriétaire/nom)
 PAQUET="bureau-simplifie"       # nom du paquet Debian
 ACTIVER=1                       # 1 = mises à jour automatiques, 0 = non
 UTILISATEUR="mamie"             # utilisateur du kiosque (pour ses réglages)
@@ -285,7 +285,8 @@ UTILISATEUR="mamie"             # utilisateur du kiosque (pour ses réglages)
   dans le `.deb` au moment de la construction (champ `Homepage`), et relue à
   l'installation. On peut la forcer avec `--depot <propriétaire>/<nom>`.
   (En construction locale, hors CI, c'est la valeur de `bundle.homepage` dans
-  `src-tauri/tauri.conf.json` qui est utilisée : remplacez-y `VOTRE-COMPTE`.)
+  `src-tauri/tauri.conf.json` qui est utilisée ; elle vaut déjà
+  `https://github.com/Ano21Nymous/bureau-simplifie`.)
 - `--sans-maj` installe le reste sans activer les mises à jour (équivaut à
   `ACTIVER=0`).
 - `ACTIVER=0` est un **verrou administrateur** : plus aucune vérification n'a
