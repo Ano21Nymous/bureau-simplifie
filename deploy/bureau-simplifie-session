@@ -1,0 +1,62 @@
+#!/bin/sh
+#
+# Session kiosque Wayland (cage) pour le Bureau Simplifié.
+# Installé par deploy/install-kiosk.sh dans /usr/local/bin/.
+#
+# cage est un compositeur « kiosque » : une seule application, toujours
+# plein écran, sans gestionnaire de fenêtres ni bureau. Impossible d'en
+# sortir par accident (pas de barre des tâches, pas d'alt-tab).
+#
+set -u
+
+APP="${BUREAU_SIMPLIFIE_BIN:-/usr/bin/bureau-simplifie}"
+CAGE="${BUREAU_SIMPLIFIE_CAGE:-/usr/bin/cage}"
+
+# Le mode verrouillé est imposé par la session : l'utilisateur ne peut pas
+# le désactiver par erreur depuis l'interface.
+export BUREAU_SIMPLIFIE_KIOSK=1
+
+# WebKitGTK : évite les écrans blancs et l'erreur 71 sur les GPU capricieux
+# (surtout NVIDIA). Le rendu est un peu plus lent, mais beaucoup plus fiable.
+# À commenter si la machine est récente et que l'on veut la performance maximale.
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+
+# Pas de décorations côté client (utile si un WM se glissait un jour).
+export GTK_CSD=0
+
+# Le splash de démarrage reste affiché pendant la bascule vers l'application,
+# ce qui évite un écran noir « sale » entre le boot et le bureau.
+if command -v plymouth >/dev/null 2>&1; then
+  plymouth quit --retain-splash 2>/dev/null || true
+  ( sleep 10; plymouth quit 2>/dev/null || true ) &
+fi
+
+attempt=0
+while :; do
+  started=$(date +%s)
+
+  "$CAGE" -- "$APP"
+  status=$?
+
+  ended=$(date +%s)
+
+  # Code 0 : fermeture volontaire depuis l'interface (« Quitter le bureau »).
+  # On rend la main à SDDM, qui réaffiche l'écran de connexion : c'est la
+  # porte de secours pour revenir à un vrai bureau si besoin.
+  if [ "$status" -eq 0 ]; then
+    exit 0
+  fi
+
+  # Crash immédiat à répétition : inutile de faire clignoter l'écran.
+  if [ $(( ended - started )) -lt 5 ]; then
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -ge 5 ]; then
+      echo "Bureau Simplifié : impossible de démarrer, abandon." >&2
+      exit 1
+    fi
+  else
+    attempt=0
+  fi
+
+  sleep 3
+done

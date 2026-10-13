@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Bureau Simplifié (X11)
+Comment=Bureau kiosque plein écran (X11)
+Exec=/usr/local/bin/bureau-simplifie-x-session
+TryExec=/usr/local/bin/bureau-simplifie-x-session
+DesktopNames=BureauSimplifie
+NoDisplay=false

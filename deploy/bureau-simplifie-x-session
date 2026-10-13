@@ -1,0 +1,56 @@
+#!/bin/sh
+#
+# Session kiosque X11 (matchbox) pour le Bureau Simplifié.
+# Variante de secours, utile si le Wayland/cage ne passe pas sur le matériel.
+#
+# matchbox est un gestionnaire de fenêtres minuscule : il ne dessine ni barre
+# des tâches ni bordure de fenêtre, et laisse l'application en plein écran.
+#
+set -u
+
+APP="${BUREAU_SIMPLIFIE_BIN:-/usr/bin/bureau-simplifie}"
+WM="${BUREAU_SIMPLIFIE_WM:-/usr/bin/matchbox-window-manager}"
+
+export BUREAU_SIMPLIFIE_KIOSK=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+export GTK_CSD=0
+
+# Ni économiseur d'écran, ni extinction automatique de l'écran.
+xset s off -dpms s noblank 2>/dev/null || true
+
+# « unclutter » masque le pointeur après 3 secondes d'inactivité.
+if command -v unclutter >/dev/null 2>&1; then
+  unclutter -idle 3 -root >/dev/null 2>&1 &
+fi
+
+# Sans gestionnaire de fenêtres, le plein écran et le focus clavier sont
+# imprévisibles sous X11 : on en lance donc toujours un, même minimal.
+"$WM" >/dev/null 2>&1 &
+WM_PID=$!
+trap 'kill "$WM_PID" 2>/dev/null || true' EXIT INT TERM
+
+attempt=0
+while :; do
+  started=$(date +%s)
+
+  "$APP"
+  status=$?
+
+  ended=$(date +%s)
+
+  if [ "$status" -eq 0 ]; then
+    exit 0
+  fi
+
+  if [ $(( ended - started )) -lt 5 ]; then
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -ge 5 ]; then
+      echo "Bureau Simplifié : impossible de démarrer, abandon." >&2
+      exit 1
+    fi
+  else
+    attempt=0
+  fi
+
+  sleep 3
+done

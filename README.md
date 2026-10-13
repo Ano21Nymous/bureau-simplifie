@@ -110,27 +110,119 @@ sudo dpkg -i bureau-simplifie_0.1.0_amd64.deb
 sudo apt -f install   # si des dépendances manquent
 ```
 
-### Lancement automatique à l'ouverture de session
+## Machine dédiée : kiosque plein écran (Debian + SDDM)
 
-Copiez le fichier `.desktop` installé (ou créez-le) dans le démarrage
-automatique :
+Pour la machine de destination, l'objectif est qu'on **ne voie jamais qu'il
+s'agit d'une application** : la machine démarre, et le bureau simplifié est là,
+plein écran, sans écran de connexion ni barre des tâches.
 
-```bash
-mkdir -p ~/.config/autostart
-cp /usr/share/applications/Bureau\ Simplifié.desktop ~/.config/autostart/
+Tout est prêt dans le dossier **`deploy/`** :
+
+```
+deploy/
+├─ install-kiosk.sh                 Installateur (à lancer sur le Debian)
+├─ bureau-simplifie-session         Session Wayland via cage (kiosque)
+├─ bureau-simplifie-x-session       Session X11 via matchbox (repli matériel)
+├─ bureau-simplifie.desktop         Session Wayland pour SDDM
+├─ bureau-simplifie-x.desktop       Session X11 pour SDDM
+├─ sddm-10-bureau-simplifie.conf    Connexion automatique SDDM
+├─ logind-10-bureau-simplifie.conf  Pas de mise en veille automatique
+└─ bureau-simplifie.service         Variante sans gestionnaire de connexion
 ```
 
-Pour démarrer directement en **mode kiosque**, ajoutez l'option dans le
-fichier `~/.config/bureau-simplifie/settings.json` (`"kiosk": true`) — le
-réglage se met également depuis l'écran *Réglages*.
+### Installation en une commande
 
-## Mode kiosque
+Sur la machine Debian, après avoir récupéré le `.deb` produit par la CI :
+
+```bash
+cd deploy
+sudo ./install-kiosk.sh mamie --with-apps --quiet-boot ~/bureau-simplifie_0.1.0_amd64.deb
+```
+
+(Remplacez `mamie` par le nom de la session utilisateur, et le chemin par le
+vôtre.)
+
+Ce que fait le script :
+
+| Étape | Détail |
+| --- | --- |
+| Applications | `--with-apps` installe le navigateur, les mails, les photos, la musique, la calculatrice, le gestionnaire de fichiers et la numérisation, en accord avec les tuiles par défaut. |
+| Session kiosque | `cage`, compositeur Wayland qui n'affiche **qu'une seule** application, toujours plein écran — ou `matchbox` en X11 (repli matériel, option `--x11`). |
+| Connexion automatique | SDDM ouvre directement la session « Bureau Simplifié », sans écran de connexion. |
+| Polices | `fonts-noto-color-emoji` : sans elle, les icônes des tuiles seraient de petits carrés vides. |
+| Démarrage silencieux | `--quiet-boot` masque GRUB et affiche un écran de démarrage à la place du défilé de messages. |
+| Veille | La mise en veille automatique est désactivée : le bureau reste toujours visible. |
+
+Options : `--x11`, `--with-apps`, `--quiet-boot`, `--no-sddm`, `--help`.
+
+### Comment l'illusion tient
+
+- **`cage`** ne sait afficher qu'une seule application : pas de barre des
+  tâches, pas d'`Alt`+`Tab`, pas de fenêtre à déplacer. Impossible d'en sortir
+  par inadvertance.
+- La variable d'environnement **`BUREAU_SIMPLIFIE_KIOSK=1`**, posée par la
+  session, active le mode verrouillé dès le démarrage — quoi qu'il y ait dans le
+  fichier de réglages.
+- Le **curseur disparaît** après quelques secondes d'inactivité.
+- Aucune décoration de fenêtre, aucun menu contextuel.
+- Le démarrage est silencieux de bout en bout (GRUB masqué, splash Plymouth,
+  puis bascule directe vers l'application).
+
+### Les portes de secours (à connaître !)
+
+Un kiosque sans issue est un kiosque qu'on ne peut plus réparer. Trois sorties
+existent, de la plus douce à la plus brutale :
+
+1. **5 clics rapides sur l'heure** en haut à gauche → l'écran *Réglages*
+   s'ouvre (c'est volontairement discret).
+2. **« Quitter le bureau »** depuis les *Réglages* → SDDM réaffiche son écran
+   de connexion, d'où l'on peut ouvrir une session normale.
+3. **Si l'écran est figé** : `Ctrl` + `Alt` + `F3` pour passer sur un autre
+   terminal virtuel, se connecter, puis :
+
+   ```bash
+   sudo systemctl stop sddm      # ou : sudo pkill bureau-simplifie
+   ```
+
+### Tester avant de confier la machine
+
+Redémarrez, puis :
+
+1. `Ctrl` + `Alt` + `F3` : passer sur un autre terminal et se connecter.
+2. Lancer la session à la main, pour voir d'éventuelles erreurs :
+
+   ```bash
+   /usr/local/bin/bureau-simplifie-session
+   ```
+3. Revenir à l'affichage principal avec `Ctrl` + `Alt` + `F1` (ou `F7`).
+
+### Variante « zéro écran de connexion »
+
+`deploy/bureau-simplifie.service` démarre le kiosque **sans aucun gestionnaire
+de connexion** : c'est la méthode la plus indétectable, mais elle supprime la
+porte de secours n°2. À réserver au moment où tout fonctionne déjà ; les
+instructions sont en commentaire en tête du fichier.
+
+### Désinstaller le kiosque
+
+```bash
+sudo rm -f /etc/sddm.conf.d/10-bureau-simplifie.conf \
+           /etc/systemd/logind.conf.d/10-bureau-simplifie.conf \
+           /usr/local/bin/bureau-simplifie-session \
+           /usr/local/bin/bureau-simplifie-x-session \
+           /usr/share/wayland-sessions/bureau-simplifie.desktop \
+           /usr/share/xsessions/bureau-simplifie-x.desktop
+```
+
+## Le mode kiosque dans l'application
 
 Quand le mode kiosque est actif : plein écran, sans cadre, toujours au premier
-plan, menu contextuel désactivé.
+plan, menu contextuel désactivé. Il se règle depuis l'écran *Réglages* — et il
+est **imposé** sur une machine dédiée par la variable d'environnement
+`BUREAU_SIMPLIFIE_KIOSK`.
 
-Pour en sortir : **cliquez 5 fois rapidement sur l'heure** en haut à gauche,
-ou utilisez `Ctrl` + `Maj` + `Q` pour quitter complètement.
+Pour en sortir : **5 clics rapides sur l'heure** en haut à gauche, ou
+`Ctrl` + `Maj` + `Q` pour quitter complètement.
 
 ## Personnalisation
 
@@ -142,7 +234,8 @@ ou utilisez `Ctrl` + `Maj` + `Q` pour quitter complètement.
   `src/system-commands.ts` (utile selon la distribution : `simple-scan`,
   `xsane`, `skanlite`…).
 - Les réglages de l'utilisateur sont enregistrés dans
-  `settings.json` (dossier de configuration de l'application).
+  `~/.config/fr.bureau.simplifie/settings.json`. En cas de problème, supprimer
+  ce fichier restaure les valeurs par défaut.
 
 ## Structure du projet
 
@@ -172,6 +265,14 @@ ou utilisez `Ctrl` + `Maj` + `Q` pour quitter complètement.
 │  ├─ capabilities/default.json
 │  ├─ Cargo.toml
 │  └─ icons/                   Icônes (générées depuis app-icon.svg)
+├─ deploy/                     Déploiement kiosque Debian + SDDM
+│  ├─ install-kiosk.sh         Installateur (à lancer sur la machine cible)
+│  ├─ bureau-simplifie-session Session Wayland (cage)
+│  ├─ bureau-simplifie-x-session       Session X11 (matchbox)
+│  ├─ *.desktop                Sessions pour SDDM
+│  ├─ sddm-*.conf              Connexion automatique
+│  ├─ logind-*.conf            Pas de veille automatique
+│  └─ bureau-simplifie.service Variante sans gestionnaire de connexion
 └─ .github/workflows/build.yml Compilation Linux/Windows
 ```
 

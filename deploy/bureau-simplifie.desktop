@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Bureau Simplifié
+Comment=Bureau kiosque plein écran (Wayland)
+Exec=/usr/local/bin/bureau-simplifie-session
+TryExec=/usr/local/bin/bureau-simplifie-session
+DesktopNames=BureauSimplifie
+NoDisplay=false
