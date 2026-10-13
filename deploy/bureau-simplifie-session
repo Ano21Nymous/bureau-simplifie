@@ -16,10 +16,21 @@ CAGE="${BUREAU_SIMPLIFIE_CAGE:-/usr/bin/cage}"
 # le désactiver par erreur depuis l'interface.
 export BUREAU_SIMPLIFIE_KIOSK=1
 
-# WebKitGTK : évite les écrans blancs et l'erreur 71 sur les GPU capricieux
-# (surtout NVIDIA). Le rendu est un peu plus lent, mais beaucoup plus fiable.
-# À commenter si la machine est récente et que l'on veut la performance maximale.
-export WEBKIT_DISABLE_DMABUF_RENDERER=1
+# WebKitGTK : la voie de rendu « DMABUF » est la plus rapide, mais certains
+# pilotes — surtout NVIDIA — provoquent un écran blanc ou une erreur 71. On ne
+# la désactive donc que dans ce cas, pour ne pas brider un GPU récent.
+# Pour forcer la désactivation (diagnostic) : BUREAU_SIMPLIFIE_RENDU_SECURISE=1
+nvidia=0
+for vendor in /sys/class/drm/card*/device/vendor; do
+  [ -r "$vendor" ] || continue
+  if [ "$(cat "$vendor" 2>/dev/null)" = "0x10de" ]; then
+    nvidia=1
+    break
+  fi
+done
+if [ "$nvidia" = "1" ] || [ "${BUREAU_SIMPLIFIE_RENDU_SECURISE:-0}" = "1" ]; then
+  export WEBKIT_DISABLE_DMABUF_RENDERER=1
+fi
 
 # Pas de décorations côté client (utile si un WM se glissait un jour).
 export GTK_CSD=0

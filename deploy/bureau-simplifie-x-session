@@ -12,8 +12,21 @@ APP="${BUREAU_SIMPLIFIE_BIN:-/usr/bin/bureau-simplifie}"
 WM="${BUREAU_SIMPLIFIE_WM:-/usr/bin/matchbox-window-manager}"
 
 export BUREAU_SIMPLIFIE_KIOSK=1
-export WEBKIT_DISABLE_DMABUF_RENDERER=1
 export GTK_CSD=0
+
+# WebKitGTK : on ne désactive la voie de rendu DMABUF (la plus rapide) que sur
+# les cartes NVIDIA, qui posent problème. Voir bureau-simplifie-session.
+nvidia=0
+for vendor in /sys/class/drm/card*/device/vendor; do
+  [ -r "$vendor" ] || continue
+  if [ "$(cat "$vendor" 2>/dev/null)" = "0x10de" ]; then
+    nvidia=1
+    break
+  fi
+done
+if [ "$nvidia" = "1" ] || [ "${BUREAU_SIMPLIFIE_RENDU_SECURISE:-0}" = "1" ]; then
+  export WEBKIT_DISABLE_DMABUF_RENDERER=1
+fi
 
 # Ni économiseur d'écran, ni extinction automatique de l'écran.
 xset s off -dpms s noblank 2>/dev/null || true
