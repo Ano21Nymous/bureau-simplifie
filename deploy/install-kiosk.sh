@@ -142,8 +142,9 @@ fi
 # --------------------------------------------------------------------------- #
 # `brightnessctl` permet à la tuile « Paramètres » de régler la luminosité ;
 # son paquet udev autorise le groupe `video` à écrire dans /sys/class/backlight.
+# `sane-utils` fournit `scanimage`, utilisé par la tuile « Imprimante ».
 # `fonts-noto-color-emoji` reste utile pour les tuiles ajoutées avec un émoji.
-PACKAGES="brightnessctl fonts-noto-color-emoji xdg-utils"
+PACKAGES="brightnessctl sane-utils fonts-noto-color-emoji xdg-utils"
 
 if [ "$MODE" = "wayland" ]; then
   PACKAGES="$PACKAGES cage"
@@ -169,13 +170,14 @@ log "Installation des paquets : $PACKAGES"
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $PACKAGES
 ok "dépendances en place"
 
-# cage a besoin d'accéder aux périphériques graphiques et d'entrée. Le groupe
-# « video » est requis dans tous les cas pour régler la luminosité (brightnessctl).
-if [ "$MODE" = "wayland" ]; then
-  usermod -aG video,render "$KIOSK_USER" 2>/dev/null || true
-else
-  usermod -aG video "$KIOSK_USER" 2>/dev/null || true
-fi
+# Accès aux périphériques : « video » (luminosité), « scanner » (scanner USB),
+# « render » (GPU, utile pour cage). Chaque groupe est ajouté séparément : si
+# l'un n'existe pas, les autres sont quand même appliqués.
+for group in video scanner render; do
+  if getent group "$group" >/dev/null 2>&1; then
+    usermod -aG "$group" "$KIOSK_USER" 2>/dev/null || true
+  fi
+done
 
 # La police d'émojis est indispensable : les tuiles s'affichent sinon en
 # petits carrés vides, ce qui casse complètement l'illusion.

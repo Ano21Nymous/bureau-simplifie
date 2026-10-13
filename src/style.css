@@ -375,6 +375,70 @@ input[type="range"] {
   background: var(--danger);
 }
 
+.button--secondary {
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.button--secondary:hover {
+  background: var(--border);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ------------------------- Numérisation (Imprimante) --------------------- */
+
+.scan {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+}
+
+.scan__preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 16rem;
+  padding: 1rem;
+  background: var(--surface-2);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  overflow: auto;
+}
+
+.scan__empty {
+  margin: 0;
+  max-width: 30rem;
+  font-size: 1.25rem;
+  color: var(--text-soft);
+  text-align: center;
+}
+
+.scan__image {
+  max-width: 100%;
+  max-height: 62vh;
+  background: #ffffff;
+  box-shadow: var(--shadow-high);
+}
+
+.scan__actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.scan__actions .button {
+  font-size: 1.35rem;
+  padding: 1rem 2rem;
+  min-width: 12rem;
+}
+
 .hint {
   margin: 0.4rem 0 0;
   font-size: 1.05rem;

@@ -5,6 +5,7 @@ import type { Settings, Shortcut } from "./types";
 import { runShortcut } from "./modules/actions";
 import { startClock } from "./modules/clock";
 import { renderGrid } from "./modules/launcher";
+import { openScanPanel } from "./modules/scan-panel";
 import { openSettingsPanel } from "./modules/settings-panel";
 import { toast } from "./modules/toast";
 import { fetchWeather } from "./modules/weather";
@@ -45,6 +46,10 @@ function persist(): void {
 function handleShortcut(shortcut: Shortcut): void {
   if (shortcut.kind === "action" && shortcut.target === "settings") {
     openSettings();
+    return;
+  }
+  if (shortcut.kind === "action" && shortcut.target === "scan") {
+    openScanPanel();
     return;
   }
   void runShortcut(shortcut);

@@ -150,6 +150,7 @@ Ce que fait le script :
 | Session kiosque | `cage`, compositeur Wayland qui n'affiche **qu'une seule** application, toujours plein écran — ou `matchbox` en X11 (repli matériel, option `--x11`). |
 | Connexion automatique | SDDM ouvre directement la session « Bureau Simplifié », sans écran de connexion. |
 | Luminosité | `brightnessctl` : permet à la tuile *Paramètres* de régler le rétroéclairage, et ajoute l'utilisateur au groupe `video`. |
+| Numérisation | `sane-utils` (commande `scanimage`) : c'est lui qui pilote le scanner depuis la tuile *Imprimante* ; l'utilisateur est ajouté au groupe `scanner`. |
 | Polices | `fonts-noto-color-emoji` : utile pour les tuiles ajoutées avec un émoji (les tuiles par défaut, elles, utilisent des icônes SVG). |
 | Démarrage silencieux | `--quiet-boot` masque GRUB et affiche un écran de démarrage à la place du défilé de messages. |
 | Veille | La mise en veille automatique est désactivée : le bureau reste toujours visible. |
@@ -253,6 +254,29 @@ modifier, on édite ce fichier (ou `~/.config/fr.bureau.simplifie/settings.json`
   `~/.config/fr.bureau.simplifie/settings.json`. En cas de problème, supprimer
   ce fichier restaure les valeurs par défaut.
 
+## La tuile « Imprimante » : numérisation
+
+La tuile **Imprimante** ne lance pas un logiciel externe : elle ouvre un écran
+de numérisation intégré, en pleine page (comme les Paramètres). On y trouve :
+
+- **Numériser** : lance le scanner et affiche l'aperçu du document ;
+- **l'aperçu** : l'image du document tel qu'il a été scanné ;
+- **Télécharger** : enregistre le document dans `~/Images/Numérisations/`
+  (nommé `numérisation-<date>.jpg`) ;
+- la **croix** en haut à droite pour revenir au bureau.
+
+Côté natif, deux commandes Rust s'en chargent : `scan_document` (appelle
+`scanimage`, essaie plusieurs formats/résolutions, renvoie l'aperçu encodé) et
+`save_scan` (recopie le document vers le dossier Images). Aucun greffon : ni
+dépendance supplémentaire, ni bibliothèque externe.
+
+Sous Linux uniquement ; dans un navigateur, l'écran est simulé pour pouvoir
+mettre au point l'interface.
+
+Des commandes de repli (`simple-scan`, `xsane`, `skanlite`) restent définies
+dans `src/system-commands.ts` si l'on préfère un jour ouvrir un logiciel
+externe.
+
 ## Direction artistique : elementary OS
 
 L'interface reprend la **palette et les codes visuels d'[elementary OS](https://elementary.io)** :
@@ -286,7 +310,8 @@ l'application est un jour distribuée publiquement.
 │     ├─ weather.ts            Météo Open-Meteo
 │     ├─ actions.ts            Exécution des tuiles (applications, sites, actions)
 │     ├─ settings-panel.ts     Écran « Paramètres »
-│     ├─ overlay.ts            Fenêtre modale générique
+│     ├─ scan-panel.ts         Écran de numérisation (tuile Imprimante)
+│     ├─ overlay.ts            Pleine page générique (Paramètres, numérisation)
 │     └─ toast.ts              Messages en bas d'écran
 ├─ src-tauri/                  Coquille native Rust
 │  ├─ src/lib.rs               Commandes natives

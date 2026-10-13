@@ -25,7 +25,7 @@ export const DEFAULT_SHORTCUTS: Shortcut[] = [
     color: "#c0392b",
   },
   {
-    // Action interne : lance le logiciel de numérisation.
+    // Action interne : ouvre l'écran de numérisation (aperçu, enregistrement).
     // (L'impression sera ajoutée plus tard.)
     id: "imprimante",
     label: "Imprimante",
