@@ -322,10 +322,11 @@ cat <<EOF
    3. lancer :  /usr/local/bin/bureau-simplifie-session
    4. revenir au bureau : Ctrl+Alt+F1 ou F7
 
- POUR SORTIR DU BUREAU (les trois portes de secours) :
-   - 5 clics rapides sur l'heure en haut à gauche  -> écran Réglages
-   - bouton « Quitter le bureau » dans les Réglages
-     -> SDDM réaffiche l'écran de connexion
+ POUR SORTIR DU BUREAU (les portes de secours) :
+   - 5 clics rapides sur l'heure en haut à gauche
+     -> écran Paramètres, et mode verrouillé désactivé
+   - Ctrl+Maj+Q -> fermer complètement
+     (SDDM réaffiche alors l'écran de connexion)
    - si l'écran est figé : Ctrl+Alt+F3, puis
        sudo systemctl stop sddm      (ou : sudo pkill bureau-simplifie)
 

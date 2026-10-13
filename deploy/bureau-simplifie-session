@@ -51,7 +51,7 @@ while :; do
 
   ended=$(date +%s)
 
-  # Code 0 : fermeture volontaire depuis l'interface (« Quitter le bureau »).
+  # Code 0 : fermeture volontaire depuis l'interface (Ctrl+Maj+Q).
   # On rend la main à SDDM, qui réaffiche l'écran de connexion : c'est la
   # porte de secours pour revenir à un vrai bureau si besoin.
   if [ "$status" -eq 0 ]; then
