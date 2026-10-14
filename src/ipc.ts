@@ -102,17 +102,40 @@ export async function scanDocument(): Promise<ScanResult> {
     return (await invoke("scan_document")) as ScanResult;
   }
   // Hors Tauri, on simule un scanner pour pouvoir tester l'interface.
+  simulatedScan += 1;
   await new Promise((resolve) => setTimeout(resolve, 900));
-  return { dataUrl: FAKE_SCAN, path: "numerisation-simulee.jpg" };
+  return {
+    dataUrl: FAKE_SCAN,
+    path: `numerisation-simulee-${simulatedScan}.jpg`,
+  };
 }
 
-/** Enregistre le document scanné dans le dossier Images de l'utilisateur. */
-export async function saveScan(path: string): Promise<string> {
+/** Compteur des scans simulés (mode navigateur uniquement). */
+let simulatedScan = 0;
+
+/** Enregistre les pages scannées dans le dossier Images de l'utilisateur. */
+export async function saveScans(paths: string[]): Promise<string[]> {
   if (isTauri) {
-    return (await invoke("save_scan", { path })) as string;
+    return (await invoke("save_scans", { paths })) as string[];
   }
   await new Promise((resolve) => setTimeout(resolve, 400));
-  return "~/Images/Numérisations/numérisation.jpg";
+  return paths.map(
+    (_path, index) => `~/Images/Numérisations/numérisation-${index + 1}.jpg`,
+  );
+}
+
+/**
+ * Ouvre le logiciel de messagerie avec les pages scannées en pièces jointes.
+ *
+ * On ne fait qu'ouvrir un brouillon : c'est l'utilisatrice qui choisit le
+ * destinataire et envoie le message depuis sa messagerie habituelle.
+ */
+export async function emailScans(paths: string[]): Promise<void> {
+  if (isTauri) {
+    await invoke("email_scans", { paths });
+    return;
+  }
+  console.info("[emailScans hors Tauri]", paths);
 }
 
 /** Active/désactive le mode kiosque (plein écran verrouillé). */

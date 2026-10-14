@@ -218,10 +218,26 @@ fn base64_encode(input: &[u8]) -> String {
     out
 }
 
-/// Chemin du fichier temporaire où est déposé le dernier document scanné.
+/// Dossier temporaire où sont déposées les pages scannées.
 #[cfg(target_os = "linux")]
-fn scan_file() -> PathBuf {
-    std::env::temp_dir().join("bureau-simplifie-scan")
+fn scan_dir() -> PathBuf {
+    std::env::temp_dir().join("bureau-simplifie")
+}
+
+/// Numéro de la prochaine page scannée : sert à donner un nom unique à chaque
+/// fichier, pour ne pas écraser la page précédente.
+#[cfg(target_os = "linux")]
+static SCAN_SEQ: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+/// Chemin d'un nouveau fichier temporaire (une page scannée = un fichier).
+///
+/// Une numérisation peut comporter plusieurs pages : chaque appel crée donc un
+/// fichier distinct. Le nom reste lisible, car il sert aussi de nom à la pièce
+/// jointe et au fichier enregistré.
+#[cfg(target_os = "linux")]
+fn scan_file(extension: &str) -> PathBuf {
+    let numero = SCAN_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    scan_dir().join(format!("numérisation-{}-{numero}.{extension}", timestamp()))
 }
 
 /// Lance `scanimage` avec une série d'options, jusqu'à ce que l'une fonctionne.
@@ -298,9 +314,14 @@ fn scan_document() -> Result<serde_json::Value, String> {
         let (bytes, mime) = run_scanimage()?;
 
         // Le document reste en fichier temporaire : c'est lui que « Télécharger »
-        // recopiera vers le dossier Images.
+        // recopiera vers le dossier Images, et que « Envoyer par mail » joindra.
         let extension = if mime == "image/png" { "png" } else { "jpg" };
-        let stored = scan_file().with_extension(extension);
+
+        let dossier = scan_dir();
+        fs::create_dir_all(&dossier)
+            .map_err(|error| format!("Création du dossier temporaire impossible : {error}"))?;
+
+        let stored = scan_file(extension);
         fs::write(&stored, &bytes)
             .map_err(|error| format!("Écriture du scan impossible : {error}"))?;
 
@@ -317,22 +338,32 @@ fn scan_document() -> Result<serde_json::Value, String> {
     }
 }
 
-/// Enregistre le dernier document scanné dans « Images/Numérisations ».
-/// Renvoie le chemin complet du fichier créé.
+/// Vérifie qu'un chemin désigne bien une page scannée par `scan_document`.
+///
+/// Sécurité : on ne travaille que sur des fichiers du dossier temporaire du
+/// bureau simplifié, créés par la numérisation. L'interface ne peut donc pas
+/// faire copier ou joindre un fichier quelconque de l'ordinateur.
+#[cfg(target_os = "linux")]
+fn scanned_file(path: &str) -> Result<PathBuf, String> {
+    let source = PathBuf::from(path);
+    let looks_like_scan = source
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with("numérisation-"));
+    if !looks_like_scan || source.parent() != Some(scan_dir().as_path()) || !source.is_file() {
+        return Err("Document numérisé introuvable.".to_string());
+    }
+    Ok(source)
+}
+
+/// Enregistre les pages scannées dans « Images/Numérisations ».
+/// Renvoie les chemins complets des fichiers créés.
 #[tauri::command]
-fn save_scan(path: String) -> Result<String, String> {
+fn save_scans(paths: Vec<String>) -> Result<Vec<String>, String> {
     #[cfg(target_os = "linux")]
     {
-        let source = PathBuf::from(path);
-        let temp = std::env::temp_dir();
-
-        // Sécurité : on n'accepte de copier qu'un fichier temporaire produit ici.
-        let looks_like_scan = source
-            .file_name()
-            .and_then(|name| name.to_str())
-            .is_some_and(|name| name.starts_with("bureau-simplifie-scan."));
-        if !looks_like_scan || source.parent() != Some(temp.as_path()) || !source.is_file() {
-            return Err("Document à enregistrer introuvable.".to_string());
+        if paths.is_empty() {
+            return Err("Aucun document à enregistrer.".to_string());
         }
 
         let home = std::env::var("HOME").map_err(|_| "Dossier personnel introuvable.".to_string())?;
@@ -340,24 +371,58 @@ fn save_scan(path: String) -> Result<String, String> {
         fs::create_dir_all(&directory)
             .map_err(|error| format!("Création du dossier impossible : {error}"))?;
 
-        let extension = source
-            .extension()
-            .and_then(|value| value.to_str())
-            .unwrap_or("jpg");
-        let destination = directory.join(format!(
-            "numérisation-{}.{extension}",
-            timestamp()
-        ));
-
-        fs::copy(&source, &destination)
-            .map_err(|error| format!("Copie impossible : {error}"))?;
-
-        Ok(destination.to_string_lossy().to_string())
+        let mut written = Vec::with_capacity(paths.len());
+        for path in &paths {
+            let source = scanned_file(path)?;
+            // On garde le nom du fichier temporaire (« numérisation-<date>-<n> ») :
+            // il est déjà unique, donc les pages ne s'écrasent pas entre elles.
+            let name = source
+                .file_name()
+                .ok_or_else(|| "Document numérisé introuvable.".to_string())?;
+            let destination = directory.join(name);
+            fs::copy(&source, &destination)
+                .map_err(|error| format!("Copie impossible : {error}"))?;
+            written.push(destination.to_string_lossy().to_string());
+        }
+        Ok(written)
     }
 
     #[cfg(not(target_os = "linux"))]
     {
-        let _ = path;
+        let _ = paths;
+        Err("La numérisation n'est disponible que sous Linux.".to_string())
+    }
+}
+
+/// Ouvre la messagerie avec les pages scannées en pièces jointes.
+///
+/// On passe par Thunderbird (le logiciel de messagerie installé) plutôt que
+/// d'envoyer directement : c'est elle qui choisit le destinataire et relit son
+/// message avant l'envoi. Le champ `attachment` de `-compose` accepte plusieurs
+/// fichiers séparés par des virgules, entourés de guillemets simples ; c'est la
+/// forme utilisée par `xdg-email`, la seule qui joigne plusieurs pièces. On le
+/// place en dernier, car il contient lui-même des virgules.
+#[tauri::command]
+fn email_scans(paths: Vec<String>) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        if paths.is_empty() {
+            return Err("Numérisez d'abord un document.".to_string());
+        }
+
+        let mut joints = Vec::with_capacity(paths.len());
+        for path in &paths {
+            let source = scanned_file(path)?;
+            joints.push(source.to_string_lossy().to_string());
+        }
+
+        let compose = format!("subject=Numérisation,attachment='{}'", joints.join(","));
+        spawn_detached("thunderbird", vec!["-compose".to_string(), compose])
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = paths;
         Err("La numérisation n'est disponible que sous Linux.".to_string())
     }
 }
@@ -530,7 +595,8 @@ pub fn run() {
             set_kiosk,
             kiosk_override,
             scan_document,
-            save_scan,
+            save_scans,
+            email_scans,
             quit_app,
             app_version,
             recent_update,

@@ -604,6 +604,7 @@ input[type="range"] {
 
 .scan__actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 1rem;
 }
@@ -611,7 +612,85 @@ input[type="range"] {
 .scan__actions .button {
   font-size: 1.35rem;
   padding: 1rem 2rem;
-  min-width: 12rem;
+  min-width: 11rem;
+}
+
+/* Bande des pages numérisées (vignettes) */
+
+.scan__pages {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  padding: 0.2rem 0;
+}
+
+.scan__pages-label {
+  font-size: 1.1rem;
+  color: var(--text-soft);
+}
+
+.scan__page {
+  position: relative;
+  display: flex;
+}
+
+.scan__page-thumb {
+  width: 5.5rem;
+  height: 7rem;
+  padding: 0;
+  overflow: hidden;
+  background: #ffffff;
+  border: 2px solid var(--border);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.scan__page-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scan__page--current .scan__page-thumb {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.scan__page-remove {
+  position: absolute;
+  top: -0.6rem;
+  right: -0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--button-text);
+  background-color: var(--button-bottom);
+  background-image: linear-gradient(
+    to bottom,
+    var(--button-top) 0%,
+    var(--button-bottom) 100%
+  );
+  border: 1px solid var(--button-border);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 0 var(--button-inset);
+  cursor: pointer;
+}
+
+.scan__page-remove:hover {
+  background-image: linear-gradient(
+    to bottom,
+    var(--button-top) 0%,
+    var(--button-bottom-hover) 100%
+  );
+  border-color: var(--button-border-hover);
 }
 
 .hint {

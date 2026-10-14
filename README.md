@@ -364,16 +364,22 @@ modifier, on édite ce fichier (ou `~/.config/fr.bureau.simplifie/settings.json`
 La tuile **Imprimante** ne lance pas un logiciel externe : elle ouvre un écran
 de numérisation intégré, en pleine page (comme les Paramètres). On y trouve :
 
-- **Numériser** : lance le scanner et affiche l'aperçu du document ;
-- **l'aperçu** : l'image du document tel qu'il a été scanné ;
-- **Télécharger** : enregistre le document dans `~/Images/Numérisations/`
-  (nommé `numérisation-<date>.jpg`) ;
+- **Numériser** : lance le scanner et ajoute une page. On peut en numériser
+  plusieurs à la suite (par exemple les deux faces, ou un document de plusieurs
+  feuilles) ; elles s'affichent en vignettes ;
+- **l'aperçu** : la page sélectionnée, en grand. Un clic sur une vignette change
+  la page affichée, la petite croix sur la vignette la supprime ;
+- **Envoyer par mail** : ouvre la messagerie (Thunderbird) avec toutes les pages
+  en pièces jointes. C'est l'utilisatrice qui choisit le destinataire et envoie ;
+- **Télécharger** : enregistre les pages dans `~/Images/Numérisations/`
+  (nommées `numérisation-<date>-<n>.jpg`) ;
 - la **croix** en haut à droite pour revenir au bureau.
 
-Côté natif, deux commandes Rust s'en chargent : `scan_document` (appelle
-`scanimage`, essaie plusieurs formats/résolutions, renvoie l'aperçu encodé) et
-`save_scan` (recopie le document vers le dossier Images). Aucun greffon : ni
-dépendance supplémentaire, ni bibliothèque externe.
+Côté natif, trois commandes Rust s'en chargent : `scan_document` (appelle
+`scanimage`, essaie plusieurs formats/résolutions, renvoie l'aperçu encodé et un
+fichier temporaire par page), `save_scans` (recopie les pages vers le dossier
+Images) et `email_scans` (ouvre Thunderbird en brouillon avec les pièces jointes).
+Aucun greffon : ni dépendance supplémentaire, ni bibliothèque externe.
 
 Sous Linux uniquement ; dans un navigateur, l'écran est simulé pour pouvoir
 mettre au point l'interface.
