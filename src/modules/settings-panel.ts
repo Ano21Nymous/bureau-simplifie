@@ -1,4 +1,4 @@
-import { readBrightness, setBrightness, setVolume } from "../ipc";
+import { appVersion, readBrightness, setBrightness, setVolume } from "../ipc";
 import type { Settings } from "../types";
 import { openOverlay } from "./overlay";
 import { toast } from "./toast";
@@ -52,48 +52,6 @@ function sliderRow(parts: SliderParts): HTMLDivElement {
   row.className = "slider-row";
   row.append(parts.control, parts.value);
   return row;
-}
-
-/**
- * Interrupteur (toggle) étiqueté, sur une seule ligne.
- *
- * Construit à partir d'une case à cocher masquée : le clic sur toute la ligne
- * l'active (comportement natif d'un `<label>`), et le clavier fonctionne aussi.
- */
-function switchField(
-  labelText: string,
-  initial: boolean,
-  onToggle: (value: boolean) => void,
-): HTMLLabelElement {
-  const label = document.createElement("label");
-  label.className = "field field--switch";
-
-  const text = document.createElement("span");
-  text.className = "field__label";
-  text.textContent = labelText;
-
-  const switchWrap = document.createElement("span");
-  switchWrap.className = "switch";
-
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.className = "switch__input";
-  input.checked = initial;
-  input.setAttribute("role", "switch");
-  input.setAttribute("aria-label", labelText);
-  input.addEventListener("change", () => {
-    onToggle(input.checked);
-  });
-
-  const track = document.createElement("span");
-  track.className = "switch__track";
-  const knob = document.createElement("span");
-  knob.className = "switch__knob";
-  track.append(knob);
-
-  switchWrap.append(input, track);
-  label.append(text, switchWrap);
-  return label;
 }
 
 /** Évite de marteler le système pendant que le doigt glisse. */
@@ -173,16 +131,17 @@ export function openSettingsPanel(context: SettingsPanelContext): void {
     cityRow.append(cityInput, citySave);
     body.append(field("Ville (météo)", cityRow));
 
-    // --------------------- Mise à jour automatique -------------------------
-    body.append(
-      switchField("Mise à jour automatique", current.majAuto, (value) => {
-        update({ majAuto: value });
-        toast(
-          value
-            ? "Mise à jour automatique activée."
-            : "Mise à jour automatique désactivée.",
-        );
-      }),
-    );
+    // --------------------------------- Version -----------------------------
+    // Ligne informative, en lecture seule : la version installée du bureau.
+    const versionValue = document.createElement("span");
+    versionValue.className = "field__value";
+    versionValue.textContent = "…";
+    const versionField = field("Version", versionValue);
+    versionField.classList.add("field--info");
+    body.append(versionField);
+
+    void appVersion().then((version) => {
+      versionValue.textContent = version;
+    });
   });
 }

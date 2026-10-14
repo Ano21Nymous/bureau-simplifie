@@ -1,9 +1,10 @@
 import { DEFAULT_SETTINGS } from "./defaults";
 import { WEATHER_ICONS } from "./icons";
-import { isTauri, kioskOverride, loadSettings, quitApp, saveSettings, setKiosk, setVolume } from "./ipc";
+import { isTauri, kioskOverride, loadSettings, quitApp, recentUpdate, saveSettings, setKiosk, setVolume } from "./ipc";
 import type { Settings, Shortcut } from "./types";
 import { runShortcut } from "./modules/actions";
 import { startClock } from "./modules/clock";
+import { showDialog } from "./modules/dialog";
 import { renderGrid } from "./modules/launcher";
 import { openScanPanel } from "./modules/scan-panel";
 import { openSettingsPanel } from "./modules/settings-panel";
@@ -88,6 +89,12 @@ function setWeatherIcon(state: string | null): void {
   icon.hidden = false;
 }
 
+/** La ville et l'état détaillé restent accessibles au survol. */
+function setWeatherTitle(text: string): void {
+  const weather = document.getElementById("weather");
+  if (weather) weather.title = text;
+}
+
 async function refreshWeather(): Promise<void> {
   weatherAbort?.abort();
   weatherAbort = new AbortController();
@@ -101,7 +108,7 @@ async function refreshWeather(): Promise<void> {
 
     setWeatherIcon(result.state);
     setText("weather-temp", `${result.temperature}°`);
-    setText("weather-place", `${result.place} · ${result.label}`);
+    setWeatherTitle(`${result.place} · ${result.label}`);
 
     if (settings.lat !== result.lat || settings.lon !== result.lon) {
       settings = { ...settings, lat: result.lat, lon: result.lon };
@@ -111,8 +118,19 @@ async function refreshWeather(): Promise<void> {
     if (error instanceof DOMException && error.name === "AbortError") return;
     setWeatherIcon(null);
     setText("weather-temp", "--°");
-    setText("weather-place", "Météo indisponible");
+    setWeatherTitle("Météo indisponible");
   }
+}
+
+/** Annonce, une seule fois, qu'une mise à jour vient d'être installée. */
+async function announceUpdateIfAny(): Promise<void> {
+  const version = await recentUpdate();
+  if (!version || version === settings.majVersionVue) return;
+
+  settings = { ...settings, majVersionVue: version };
+  persist();
+
+  await showDialog("Votre système a été mis à jour.");
 }
 
 async function exitKiosk(): Promise<void> {
@@ -193,6 +211,7 @@ async function init(): Promise<void> {
 
   if (settings.kiosk) void setKiosk(true);
   void setVolume(settings.volume);
+  void announceUpdateIfAny();
   void refreshWeather();
   window.setInterval(() => void refreshWeather(), WEATHER_REFRESH_MS);
 

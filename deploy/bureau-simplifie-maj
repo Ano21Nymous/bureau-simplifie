@@ -16,9 +16,9 @@ CONF="/etc/bureau-simplifie/maj.conf"
 PAQUET="bureau-simplifie"
 DEPOT=""
 ACTIVER=1
-# Utilisateur du kiosque : permet de retrouver ses réglages (interrupteur
-# « Mise à jour automatique » de l'écran Paramètres).
-UTILISATEUR=""
+# Fichier marqueur déposé après une mise à jour réussie. L'application le lit au
+# démarrage pour afficher une petite fenêtre « Votre système a été mis à jour. ».
+MARQUEUR="/var/lib/bureau-simplifie/maj-ok"
 
 if [ -r "$CONF" ]; then
   # shellcheck disable=SC1090
@@ -34,18 +34,6 @@ warn() { printf 'maj: /!\\ %s\n' "$*" >&2; }
 if [ "$ACTIVER" != "1" ]; then
   log "mise à jour automatique désactivée (ACTIVER=$ACTIVER)"
   exit 0
-fi
-
-# Interrupteur « Mise à jour automatique » de l'écran Paramètres : le réglage
-# est écrit par l'application dans le fichier de configuration de l'utilisateur
-# du kiosque. Champ absent (ou fichier absent) => mise à jour maintenue.
-if [ -n "$UTILISATEUR" ]; then
-  REGLAGES="/home/$UTILISATEUR/.config/fr.bureau.simplifie/settings.json"
-  if [ -r "$REGLAGES" ] \
-     && grep -Eq '"majAuto"[[:space:]]*:[[:space:]]*false' "$REGLAGES"; then
-    log "mise à jour automatique désactivée depuis les paramètres de $UTILISATEUR"
-    exit 0
-  fi
 fi
 
 if [ -z "$DEPOT" ]; then
@@ -140,7 +128,18 @@ fi
 
 log "installation du nouveau paquet"
 if DEBIAN_FRONTEND=noninteractive apt-get install -y "$TMP"; then
-  ok "mise à jour terminée : $(dpkg-query -W -f='${Version}' "$PAQUET" 2>/dev/null)"
+  NOUVELLE="$(dpkg-query -W -f='${Version}' "$PAQUET" 2>/dev/null || true)"
+  NOUVELLE="${NOUVELLE:-$DISTANT}"
+  ok "mise à jour terminée : $NOUVELLE"
+
+  # Marqueur lu par l'application au démarrage : elle affiche alors une petite
+  # fenêtre « Votre système a été mis à jour. » avec un bouton OK.
+  install -d -m 0755 "$(dirname "$MARQUEUR")"
+  if printf '%s\n' "$NOUVELLE" > "$MARQUEUR" 2>/dev/null; then
+    chmod 0644 "$MARQUEUR" 2>/dev/null || true
+  else
+    warn "marqueur de mise à jour non écrit (chemin : $MARQUEUR)"
+  fi
 else
   warn "l'installation a échoué : la version précédente reste en place."
   exit 1

@@ -272,7 +272,9 @@ l'application** (pas de greffon Tauri, pas de bibliothèque) :
    - interroge la dernière version publiée sur GitHub ;
    - les compare (`dpkg --compare-versions`) ;
    - si la version publiée est plus récente, télécharge son `.deb`, vérifie qu'il
-     s'agit bien du bon paquet, puis l'installe.
+     s'agit bien du bon paquet, puis l'installe ;
+   - dépose alors un marqueur, que l'application lit au démarrage pour afficher
+     « Votre système a été mis à jour. ».
 
 Le script `deploy/bureau-simplifie-maj` est celui qui travaille ; il est
 utilisable à la main :
@@ -290,7 +292,6 @@ Tout tient dans **`/etc/bureau-simplifie/maj.conf`** :
 DEPOT="Ano21Nymous/bureau-simplifie"   # dépôt GitHub (propriétaire/nom)
 PAQUET="bureau-simplifie"       # nom du paquet Debian
 ACTIVER=1                       # 1 = mises à jour automatiques, 0 = non
-UTILISATEUR="mamie"             # utilisateur du kiosque (pour ses réglages)
 ```
 
 - L'installateur **déduit `DEPOT` tout seul** : l'adresse du dépôt est gravée
@@ -302,12 +303,13 @@ UTILISATEUR="mamie"             # utilisateur du kiosque (pour ses réglages)
 - `--sans-maj` installe le reste sans activer les mises à jour (équivaut à
   `ACTIVER=0`).
 - `ACTIVER=0` est un **verrou administrateur** : plus aucune vérification n'a
-  lieu, quel que soit le réglage de l'utilisateur.
-- **L'interrupteur « Mise à jour automatique »** de l'écran *Paramètres* laisse
-  l'utilisateur couper la vérification au démarrage sans toucher au système : il
-  écrit simplement `majAuto` dans ses réglages, que le programme de mise à jour
-  relit pour l'utilisateur indiqué par `UTILISATEUR`. Un `ACTIVER=0` posé par
-  l'administrateur reste prioritaire.
+  lieu. C'est le seul moyen de couper les mises à jour ; il n'y a **pas de
+  réglage côté utilisateur** (les mises à jour se font à chaque démarrage).
+- Après une mise à jour réussie, le programme dépose la nouvelle version dans
+  `/var/lib/bureau-simplifie/maj-ok`. Au démarrage suivant, l'application lit ce
+  marqueur et affiche **une seule fois** une petite fenêtre « Votre système a été
+  mis à jour. » avec un bouton *OK*. La version déjà annoncée est mémorisée dans
+  le champ `majVersionVue` des réglages, pour ne pas répéter le message.
 
 > **Sécurité** : la mise à jour n'installe que des `.deb` provenant du dépôt
 > configuré, et vérifie le nom du paquet avant d'installer. Elle se fait en
@@ -343,8 +345,7 @@ contient que les réglages dont on se sert vraiment :
   charge).
 - **Volume** sonore.
 - **Ville** utilisée pour la météo.
-- **Mise à jour automatique** : un interrupteur pour couper (ou rallumer) la
-  vérification faite au démarrage (voir « Mises à jour automatiques »).
+- **Version** installée du bureau, affichée en lecture seule (dernière ligne).
 
 Le reste (taille du texte, thème, verrouillage, édition des tuiles) n'est plus
 exposé dans l'interface. Les tuiles par défaut — quatre seulement : Internet, Mes

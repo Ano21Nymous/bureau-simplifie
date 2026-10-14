@@ -31,12 +31,12 @@ export interface Settings {
   /** Mode kiosque : plein écran, sans décorations, toujours au premier plan. */
   kiosk: boolean;
   /**
-   * Mise à jour automatique au démarrage (Linux/kiosque).
+   * Dernière version pour laquelle la fenêtre « Votre système a été mis à
+   * jour. » a été affichée.
    *
-   * Le programme de mise à jour tourne en root avant la session graphique :
-   * il relit ce champ dans le fichier de réglages de l'utilisateur pour savoir
-   * s'il doit vérifier les nouvelles versions.
+   * La mise à jour est automatique à chaque démarrage ; ce champ sert
+   * uniquement à ne pas répéter le message à chaque lancement du bureau.
    */
-  majAuto: boolean;
+  majVersionVue?: string;
   shortcuts: Shortcut[];
 }

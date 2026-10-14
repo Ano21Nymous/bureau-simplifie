@@ -1,4 +1,7 @@
-/** Horloge : heure et date en très gros, mises à jour une fois par seconde. */
+/**
+ * Horloge : l'heure seule, en petit. Le jour complet n'apparaît qu'au survol,
+ * dans une infobulle (voir `.clock__date` dans la feuille de style).
+ */
 
 const timeFormatter = new Intl.DateTimeFormat("fr-FR", {
   hour: "2-digit",
@@ -9,6 +12,7 @@ const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
   weekday: "long",
   day: "numeric",
   month: "long",
+  year: "numeric",
 });
 
 export function startClock(): () => void {

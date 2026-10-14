@@ -145,6 +145,32 @@ export async function quitApp(): Promise<void> {
   window.close();
 }
 
+/** Version installée du bureau (renseignée par la CI à chaque publication). */
+export async function appVersion(): Promise<string> {
+  if (isTauri) {
+    return (await invoke("app_version")) as string;
+  }
+  return "0.1.0";
+}
+
+/**
+ * Version posée par la dernière mise à jour automatique, ou `null` s'il n'y a
+ * rien de nouveau à annoncer. Sert à la fenêtre « Votre système a été mis à
+ * jour. » affichée une seule fois.
+ */
+export async function recentUpdate(): Promise<string | null> {
+  if (isTauri) {
+    try {
+      return (await invoke("recent_update")) as string | null;
+    } catch (error) {
+      console.error("Marqueur de mise à jour illisible", error);
+      return null;
+    }
+  }
+  // Mode navigateur : permet de tester la fenêtre en posant la clé à la main.
+  return window.localStorage.getItem("bureau-simplifie.maj-ok");
+}
+
 const STORAGE_KEY = "bureau-simplifie.settings";
 
 /** Charge les réglages enregistrés (null si aucun). */

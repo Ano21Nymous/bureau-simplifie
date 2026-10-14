@@ -48,8 +48,8 @@ Options :
                 Dépôt GitHub d'où proviennent les mises à jour automatiques
                 (par défaut : déduit de l'application installée).
   --sans-maj    Ne pas mettre à jour l'application automatiquement au
-                démarrage. (L'utilisateur peut aussi l'activer ou la
-                désactiver à tout moment depuis l'écran Paramètres.)
+                démarrage. (Par défaut, chaque démarrage vérifie et installe
+                la dernière version publiée.)
   -h, --help    Affiche cette aide.
 
 Exemples :
@@ -377,17 +377,17 @@ esac
 log "Installation de la mise à jour automatique"
 install -m 0755 "$SCRIPT_DIR/bureau-simplifie-maj" /usr/local/bin/bureau-simplifie-maj
 install -d "$MAJ_CONF_DIR"
+# Dossier où le programme de mise à jour dépose, après une mise à jour réussie,
+# le marqueur que l'application lit au démarrage (fenêtre « système à jour »).
+install -d -m 0755 /var/lib/bureau-simplifie
 cat > "$MAJ_CONF_DIR/maj.conf" <<CONF
 # Dépôt GitHub d'où proviennent les mises à jour (« propriétaire/nom »).
 DEPOT="$DEPOT"
 # Nom du paquet Debian installé.
 PAQUET="bureau-simplifie"
 # Mise à jour automatique au démarrage : 1 = oui, 0 = non.
-# (L'utilisateur peut aussi la désactiver depuis l'écran Paramètres.)
+# (Réglé ici par l'option --sans-maj ; modifiable ensuite dans ce fichier.)
 ACTIVER=$MAJ_ACTIVE
-# Utilisateur du kiosque, dont les réglages contiennent l'interrupteur
-# « Mise à jour automatique ».
-UTILISATEUR="$KIOSK_USER"
 CONF
 install -m 0644 "$SCRIPT_DIR/bureau-simplifie-maj.service" \
   /etc/systemd/system/bureau-simplifie-maj.service
@@ -444,12 +444,11 @@ cat <<EOF
 
  MISES À JOUR AUTOMATIQUES :
    au démarrage, le PC compare sa version à la dernière publiée sur GitHub
-   et installe le nouveau paquet si nécessaire.
+   et installe le nouveau paquet si nécessaire. L'application affiche alors
+   une petite fenêtre « Votre système a été mis à jour. »
    - forcer une vérification :  sudo bureau-simplifie-maj
    - voir le journal :          journalctl -u bureau-simplifie-maj
    - désactiver : modifier ACTIVER=0 dans /etc/bureau-simplifie/maj.conf
-      (ou, au quotidien, l'interrupteur « Mise à jour automatique »
-       de l'écran Paramètres)
 
  DÉSINSTALLER le kiosque :
    sudo systemctl disable --now bureau-simplifie-maj.service

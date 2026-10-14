@@ -404,6 +404,29 @@ fn quit_app(app: AppHandle) {
     app.exit(0);
 }
 
+/// Version de l'application (celle publiée par la CI à chaque mise à jour).
+#[tauri::command]
+fn app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+/// Version installée lors de la dernière mise à jour automatique.
+///
+/// Le programme de mise à jour (voir deploy/bureau-simplifie-maj) dépose, après
+/// une installation réussie, la nouvelle version dans un fichier marqueur.
+/// L'application s'en sert pour afficher une seule fois la petite fenêtre
+/// « Votre système a été mis à jour. ».
+#[tauri::command]
+fn recent_update() -> Option<String> {
+    let raw = fs::read_to_string("/var/lib/bureau-simplifie/maj-ok").ok()?;
+    let version = raw.trim().to_string();
+    if version.is_empty() {
+        None
+    } else {
+        Some(version)
+    }
+}
+
 /// Lit les réglages enregistrés (valeur `null` si aucun fichier).
 #[tauri::command]
 fn load_settings(app: AppHandle) -> Result<Option<serde_json::Value>, String> {
@@ -509,6 +532,8 @@ pub fn run() {
             scan_document,
             save_scan,
             quit_app,
+            app_version,
+            recent_update,
             load_settings,
             save_settings
         ])

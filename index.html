@@ -10,23 +10,21 @@
   <body>
     <div id="app">
       <header class="topbar">
-        <section class="clock" aria-live="off">
+        <section class="clock" id="clock" aria-live="off">
           <div class="clock__time" id="clock-time">--:--</div>
-          <div class="clock__date" id="clock-date">&nbsp;</div>
+          <div class="clock__date" id="clock-date" role="tooltip"></div>
         </section>
 
         <section class="weather" id="weather" aria-live="polite">
           <img class="weather__icon" id="weather-icon" alt="" />
-          <div class="weather__body">
-            <div class="weather__temp" id="weather-temp">--°</div>
-            <div class="weather__place" id="weather-place">Chargement…</div>
-          </div>
+          <div class="weather__temp" id="weather-temp">--°</div>
         </section>
       </header>
 
       <main class="grid" id="grid" aria-label="Mes raccourcis"></main>
 
       <div class="overlay" id="overlay" hidden></div>
+      <div class="dialog-layer" id="dialog" hidden></div>
       <div class="toast" id="toast" hidden></div>
     </div>
 
