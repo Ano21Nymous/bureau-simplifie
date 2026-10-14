@@ -12,6 +12,10 @@ APP="${BUREAU_SIMPLIFIE_BIN:-/usr/bin/bureau-simplifie}"
 WM="${BUREAU_SIMPLIFIE_WM:-/usr/bin/matchbox-window-manager}"
 
 export BUREAU_SIMPLIFIE_KIOSK=1
+
+# Sous X11, c'est matchbox qui dessine le cadre (barre de titre réduite à une
+# croix de fermeture). On demande donc aux applications de ne PAS dessiner la
+# leur : sinon deux barres de titre se superposeraient.
 export GTK_CSD=0
 
 # WebKitGTK : on ne désactive la voie de rendu DMABUF (la plus rapide) que sur

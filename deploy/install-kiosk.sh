@@ -240,6 +240,38 @@ install -m 0644 "$SCRIPT_DIR/bureau-simplifie-x.desktop" /usr/share/xsessions/bu
 ok "sessions installées (wayland-sessions + xsessions)"
 
 # --------------------------------------------------------------------------- #
+#  Barre de titre des applications externes (Firefox, Thunderbird)
+# --------------------------------------------------------------------------- #
+# Sous cage (Wayland), le compositeur ne fournit aucune décoration : chaque
+# application dessine donc la sienne. Pour que l'on garde un moyen évident de
+# fermer Firefox et Thunderbird — sans bouton « réduire » qui ferait perdre la
+# fenêtre — on réduit cette barre de titre à une seule croix de fermeture.
+log "Réduction de la barre de titre à un simple bouton fermer"
+KIOSK_HOME="$(getent passwd "$KIOSK_USER" 2>/dev/null | cut -d: -f6)"
+[ -n "$KIOSK_HOME" ] || KIOSK_HOME="/home/$KIOSK_USER"
+
+for gtk in gtk-3.0 gtk-4.0; do
+  cfg="$KIOSK_HOME/.config/$gtk/settings.ini"
+  install -d -o "$KIOSK_USER" -g "$KIOSK_USER" "$KIOSK_HOME/.config/$gtk" 2>/dev/null \
+    || install -d "$KIOSK_HOME/.config/$gtk"
+
+  if [ -f "$cfg" ] && grep -qE '^[[:space:]]*gtk-decoration-layout[[:space:]]*=' "$cfg"; then
+    # La clé existe déjà : on la met à jour.
+    sed -i -E 's|^[[:space:]]*gtk-decoration-layout[[:space:]]*=.*|gtk-decoration-layout=:close|' "$cfg"
+  elif [ -s "$cfg" ] && grep -qE '^\[Settings\]' "$cfg"; then
+    printf 'gtk-decoration-layout=:close\n' >> "$cfg"
+  elif [ -s "$cfg" ]; then
+    printf '\n[Settings]\ngtk-decoration-layout=:close\n' >> "$cfg"
+  else
+    printf '[Settings]\ngtk-decoration-layout=:close\n' > "$cfg"
+  fi
+
+  chown "$KIOSK_USER:$KIOSK_USER" "$cfg" 2>/dev/null || true
+  chmod 0644 "$cfg" 2>/dev/null || true
+done
+ok "Firefox et Thunderbird afficheront une croix de fermeture unique"
+
+# --------------------------------------------------------------------------- #
 #  SDDM
 # --------------------------------------------------------------------------- #
 if [ "$USE_SDDM" -eq 1 ]; then
@@ -389,6 +421,10 @@ cat <<EOF
  AU PROCHAIN REDÉMARRAGE, la machine ouvrira directement le Bureau
  Simplifié, plein écran, sans écran de connexion.
 
+ FENÊTRES (Firefox, Thunderbird) :
+   une seule croix de fermeture, pas de bouton « réduire ». Ce réglage est
+   posé maintenant, et l'application le réapplique à chaque démarrage.
+
  AVANT de redémarrer, testez sans risque :
    1. Ctrl+Alt+F3                (passer sur un autre terminal virtuel)
    2. se connecter en tant que $KIOSK_USER
@@ -427,5 +463,8 @@ cat <<EOF
               /usr/share/wayland-sessions/bureau-simplifie.desktop \\
               /usr/share/xsessions/bureau-simplifie-x.desktop
    sudo systemctl daemon-reload
+   (facultatif) rétablir les barres de titre de Firefox et Thunderbird :
+   supprimer la ligne « gtk-decoration-layout » de
+   ~/.config/gtk-3.0/settings.ini et ~/.config/gtk-4.0/settings.ini
 ────────────────────────────────────────────────────────────────────────
 EOF

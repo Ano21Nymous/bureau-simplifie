@@ -32,8 +32,14 @@ if [ "$nvidia" = "1" ] || [ "${BUREAU_SIMPLIFIE_RENDU_SECURISE:-0}" = "1" ]; the
   export WEBKIT_DISABLE_DMABUF_RENDERER=1
 fi
 
-# Pas de décorations côté client (utile si un WM se glissait un jour).
-export GTK_CSD=0
+# Décorations côté client : sous cage, le compositeur ne dessine aucune barre
+# de titre. Les désactiver (GTK_CSD=0) priverait Firefox et Thunderbird de
+# toute fenêtre à fermer : ils s'afficheraient plein écran sans le moindre
+# bouton. On les laisse donc dessiner leur barre de titre ; install-kiosk.sh
+# réduit celle-ci à une simple croix de fermeture
+# (~/.config/gtk-3.0/settings.ini → gtk-decoration-layout=:close).
+# Notre propre fenêtre, elle, reste sans cadre : Tauri s'en charge côté appli.
+unset GTK_CSD 2>/dev/null || true
 
 # Le splash de démarrage reste affiché pendant la bascule vers l'application,
 # ce qui évite un écran noir « sale » entre le boot et le bureau.

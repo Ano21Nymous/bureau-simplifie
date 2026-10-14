@@ -375,11 +375,14 @@ fn timestamp() -> String {
         .unwrap_or_else(|| "document".to_string())
 }
 
-/// Applique (ou retire) le mode kiosque : plein écran, sans cadre, au premier plan.
+/// Applique (ou retire) le mode kiosque : plein écran, sans cadre.
+///
+/// On ne force pas « toujours au premier plan » : sous X11, cela maintiendrait
+/// le bureau au-dessus des applications qu'il lance (Firefox, Thunderbird), qui
+/// deviendraient alors invisibles. Le plein écran suffit à occuper l'écran.
 fn apply_kiosk(window: &WebviewWindow, enabled: bool) -> Result<(), String> {
     window.set_fullscreen(enabled).map_err(|error| error.to_string())?;
     window.set_decorations(!enabled).map_err(|error| error.to_string())?;
-    window.set_always_on_top(enabled).map_err(|error| error.to_string())?;
     Ok(())
 }
 
@@ -422,6 +425,62 @@ fn save_settings(app: AppHandle, settings: serde_json::Value) -> Result<(), Stri
     fs::write(&path, raw).map_err(|error| error.to_string())
 }
 
+/// Réduit la barre de titre des applications externes (Firefox, Thunderbird)
+/// à une seule croix de fermeture.
+///
+/// Sous cage (Wayland), le compositeur ne dessine aucune décoration : si l'on
+/// laissait les décorations côté client désactivées, ces applications
+/// s'afficheraient plein écran sans le moindre bouton — donc sans moyen évident
+/// de les fermer. On écrit pour cela le réglage GTK correspondant à chaque
+/// démarrage en mode kiosque : le correctif suit ainsi les mises à jour
+/// automatiques, sans qu'il faille réinstaller le kiosque à la main.
+/// (install-kiosk.sh pose le même réglage dès l'installation.)
+fn ensure_gtk_decorations() {
+    const REGLAGE: &str = "gtk-decoration-layout=:close";
+
+    let Some(home) = std::env::var_os("HOME") else {
+        return;
+    };
+
+    for version in ["gtk-3.0", "gtk-4.0"] {
+        let dossier = PathBuf::from(&home).join(".config").join(version);
+        if fs::create_dir_all(&dossier).is_err() {
+            continue;
+        }
+
+        let fichier = dossier.join("settings.ini");
+        let contenu = fs::read_to_string(&fichier).unwrap_or_default();
+
+        // On remplace la clé si elle existe déjà, sinon on l'ajoute en veillant
+        // à rester dans la section [Settings].
+        let mut remplace = false;
+        let mut lignes: Vec<String> = Vec::new();
+        for ligne in contenu.lines() {
+            if ligne.trim_start().starts_with("gtk-decoration-layout") {
+                lignes.push(REGLAGE.to_string());
+                remplace = true;
+            } else {
+                lignes.push(ligne.to_string());
+            }
+        }
+
+        let nouveau = if remplace {
+            let mut texte = lignes.join("\n");
+            texte.push('\n');
+            texte
+        } else if contenu.trim().is_empty() {
+            format!("[Settings]\n{}\n", REGLAGE)
+        } else if contenu.contains("[Settings]") {
+            let separateur = if contenu.ends_with('\n') { "" } else { "\n" };
+            format!("{contenu}{separateur}{}\n", REGLAGE)
+        } else {
+            format!("{contenu}\n[Settings]\n{}\n", REGLAGE)
+        };
+
+        let _ = fs::write(&fichier, nouveau);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -429,6 +488,9 @@ pub fn run() {
             // Si la session démarre en kiosque, on l'applique dès la création de
             // la fenêtre : aucun cadre ni barre ne doit apparaître, même furtivement.
             if std::env::var_os("BUREAU_SIMPLIFIE_KIOSK").is_some() {
+                // Réglage qui suit les mises à jour automatiques : Firefox et
+                // Thunderbird ne conservent qu'une croix de fermeture.
+                ensure_gtk_decorations();
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = apply_kiosk(&window, true);
                 }

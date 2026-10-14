@@ -167,6 +167,7 @@ Ce que fait le script :
 | --- | --- |
 | Applications | `--with-apps` installe le navigateur, les mails, les photos, la musique, la calculatrice, le gestionnaire de fichiers et la numérisation, en accord avec les tuiles par défaut. |
 | Session kiosque | `cage`, compositeur Wayland qui n'affiche **qu'une seule** application, toujours plein écran — ou `matchbox` en X11 (repli matériel, option `--x11`). |
+| Fenêtres des applis | Firefox et Thunderbird gardent une barre de titre réduite à une **seule croix de fermeture** (pas de bouton « réduire » ni « agrandir »), pour qu'on ne puisse jamais perdre la fenêtre. L'application réapplique ce réglage à chaque démarrage en mode kiosque. |
 | Connexion automatique | SDDM ouvre directement la session « Bureau Simplifié », sans écran de connexion. |
 | Luminosité | `brightnessctl` : permet à la tuile *Paramètres* de régler le rétroéclairage, et ajoute l'utilisateur au groupe `video`. |
 | Numérisation | `sane-utils` (commande `scanimage`) : c'est lui qui pilote le scanner depuis la tuile *Imprimante* ; l'utilisateur est ajouté au groupe `scanner`. |
@@ -187,7 +188,9 @@ Options : `--x11`, `--with-apps`, `--quiet-boot`, `--no-sddm`,
   session, active le mode verrouillé dès le démarrage — quoi qu'il y ait dans le
   fichier de réglages.
 - Le **curseur disparaît** après quelques secondes d'inactivité.
-- Aucune décoration de fenêtre, aucun menu contextuel.
+- Notre fenêtre n'a aucune décoration ; les applications lancées (Firefox,
+  Thunderbird) n'en gardent qu'une seule, une **croix de fermeture**. Aucun menu
+  contextuel.
 - Le démarrage est silencieux de bout en bout (GRUB masqué, splash Plymouth,
   puis bascule directe vers l'application).
 
@@ -244,6 +247,11 @@ sudo rm -f /etc/sddm.conf.d/10-bureau-simplifie.conf \
            /usr/share/xsessions/bureau-simplifie-x.desktop
 sudo systemctl daemon-reload
 ```
+
+La configuration qui réduit la barre de titre de Firefox et Thunderbird vit
+dans le `settings.ini` de l'utilisateur (clé `gtk-decoration-layout`). Pour
+revenir à des fenêtres classiques, supprimez cette clé ; l'application la repose
+au démarrage suivant tant que le mode kiosque est actif.
 
 ## Mises à jour automatiques
 
@@ -315,8 +323,8 @@ UTILISATEUR="mamie"             # utilisateur du kiosque (pour ses réglages)
 
 ## Le mode kiosque dans l'application
 
-Quand le mode kiosque est actif : plein écran, sans cadre, toujours au premier
-plan, menu contextuel désactivé. Il est **imposé** sur une machine dédiée par la
+Quand le mode kiosque est actif : plein écran, sans cadre, menu contextuel
+désactivé. Il est **imposé** sur une machine dédiée par la
 variable d'environnement `BUREAU_SIMPLIFIE_KIOSK` et n'est plus réglable depuis
 *Paramètres* (pour éviter qu'on le désactive par erreur) : il se désactive
 automatiquement dès qu'on emprunte une porte de secours.
