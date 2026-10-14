@@ -99,18 +99,22 @@ que consultent les machines pour se mettre à jour (voir la section suivante).
 
 ## Installer sur l'ordinateur de destination (Linux)
 
-Récupérez le `.AppImage` (le plus simple) :
+Depuis la page **Releases**
+(<https://github.com/Ano21Nymous/bureau-simplifie/releases>), téléchargez le
+`.deb` de la dernière version, puis installez-le :
 
 ```bash
-chmod +x "Bureau Simplifie_0.1.0_amd64.AppImage"
-./"Bureau Simplifie_0.1.0_amd64.AppImage"
+# exemple : version 0.1.1
+wget https://github.com/Ano21Nymous/bureau-simplifie/releases/download/v0.1.1/bureau-simplifie_0.1.1_amd64.deb
+sudo apt install -y ./bureau-simplifie_0.1.1_amd64.deb
 ```
 
-Ou le `.deb` :
+Ou, sans rien installer, le `.AppImage` — disponible dans les *artifacts* du
+workflow (onglet **Actions** → dernière exécution → `paquets-linux`) :
 
 ```bash
-sudo dpkg -i bureau-simplifie_0.1.0_amd64.deb
-sudo apt -f install   # si des dépendances manquent
+chmod +x "Bureau Simplifie_0.1.1_amd64.AppImage"
+./"Bureau Simplifie_0.1.1_amd64.AppImage"
 ```
 
 > **Pourquoi le paquet s'appelle `bureau-simplifie`** et non « Bureau Simplifié » ?
